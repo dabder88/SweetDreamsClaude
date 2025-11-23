@@ -249,25 +249,26 @@ export const visualizeDream = async (description: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: apiKey });
 
   try {
-    const prompt = `A surreal, artistic, and dreamlike digital painting representation of this dream description (interpret the visuals artistically): "${description}". 
+    const prompt = `Generate a surreal, artistic, and dreamlike digital painting: "${description}". 
     Style: Ethereal, psychological, symbolic, soft lighting, deep atmosphere, high quality concept art, darker tones to match a midnight theme.`;
 
-    const response = await ai.models.generateImages({
-      model: 'imagen-3.0-generate-001',
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-      }
+    // Switch to gemini-2.0-flash-exp for image generation via generateContent
+    // This avoids the 404 error from imagen-3.0-generate-001 which is often restricted
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: prompt,
     });
 
-    // @ts-ignore
-    const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
-    
-    if (imageBytes) {
-      return `data:image/png;base64,${imageBytes}`;
+    // Iterate through parts to find the inline image data
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
     }
     
-    throw new Error("Изображение не сгенерировано");
+    throw new Error("Изображение не сгенерировано (нет данных в ответе)");
   } catch (error) {
     console.error("Visualization failed", error);
     throw error;
