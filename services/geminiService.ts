@@ -156,8 +156,9 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
 
   try {
     // --- EXECUTE STEP 1 ---
+    // Changed model from 'gemini-3-pro-preview' to 'gemini-2.5-flash' to avoid Rate Limits (429) on free tier
     const response1 = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-2.5-flash',
       contents: step1Prompt,
       config: {
         systemInstruction: baseSystemInstruction,
@@ -205,8 +206,9 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
 
         try {
           // Initialize new AI instance per request if needed, or reuse
+          // Changed model from 'gemini-3-pro-preview' to 'gemini-2.5-flash' to avoid Rate Limits (429) on free tier
           const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-2.5-flash',
             contents: step2Prompt,
             config: {
               systemInstruction: "Ты — эксперт по символам. Пиши подробно, глубоко и много. Только русский язык.",
