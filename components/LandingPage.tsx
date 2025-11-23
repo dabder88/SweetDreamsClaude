@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowRight, User, Sparkles } from 'lucide-react';
+import { ArrowRight, User, Sparkles, Moon } from 'lucide-react';
 import Button from './Button';
 import TiltCard from './TiltCard';
 import { AppView } from '../types';
@@ -15,17 +14,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoToCabinet }) => 
     <div className="relative z-20 flex flex-col min-h-screen">
        {/* Transparent Header */}
        <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
-          <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-indigo-400/30">
-                <span className="text-white font-serif font-bold text-2xl">M</span>
+          {/* LOGO - TOP LEFT */}
+          <div className="flex items-center gap-3 group cursor-pointer">
+              <div className="relative w-10 h-10 flex items-center justify-center bg-gradient-to-tr from-indigo-900 to-slate-900 rounded-xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.3)] group-hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] transition-all duration-500">
+                 <Moon size={20} className="text-indigo-300 absolute -top-1 -right-1 rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+                 <Sparkles size={16} className="text-purple-300 absolute bottom-2 left-2 opacity-80 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h1 className="font-serif text-2xl font-bold text-slate-50 tracking-tight hidden sm:block">Mindscape</h1>
+              <h1 className="font-serif text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-indigo-300 tracking-tight hidden sm:block group-hover:to-white transition-all duration-500">
+                PsyDream
+              </h1>
           </div>
           
-          {/* Cabinet Link (Top Left - wait, user asked for top LEFT in previous prompt, but standard is top RIGHT. 
-             The prompt said "А ссылка на личный кабинет долна быть где-то в верхнем левом углу."
-             Okay, I will put it on the Left side as requested, next to logo or just absolute left). 
-          */}
+          {/* CABINET LINK - TOP RIGHT */}
           <button 
             onClick={onGoToCabinet}
             className="flex items-center gap-2 text-sm font-medium text-indigo-200 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-full border border-white/10 hover:border-indigo-400/50 backdrop-blur-md"
@@ -72,7 +72,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoToCabinet }) => 
        </main>
 
        <footer className="w-full text-center py-8 text-slate-600 text-xs uppercase tracking-widest">
-          Mindscape © {new Date().getFullYear()}
+          PsyDream © {new Date().getFullYear()}
        </footer>
     </div>
   );

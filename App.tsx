@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { DreamData, PsychMethod, AppView } from './types';
 import StepIndicator from './components/StepIndicator';
@@ -14,7 +13,7 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
-import { ArrowRight, ArrowLeft, User, Menu, Ghost } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User, Menu, Ghost, Moon, Sparkles } from 'lucide-react';
 import TiltCard from './components/TiltCard';
 
 const INITIAL_DATA: DreamData = {
@@ -97,10 +96,11 @@ function App() {
        <header className="bg-slate-900/40 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo('landing')}>
-              <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-transform group-hover:scale-105 border border-indigo-400/30">
-                <span className="text-white font-serif font-bold text-xl">M</span>
+              <div className="relative w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-indigo-900 to-slate-900 rounded-lg border border-indigo-500/30 shadow-sm group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all">
+                <Moon size={18} className="text-indigo-300 absolute -top-1 -right-1 rotate-12" />
+                <Sparkles size={12} className="text-purple-300 absolute bottom-1.5 left-1.5" />
               </div>
-              <h1 className="font-serif text-xl font-bold text-slate-50 tracking-tight group-hover:text-indigo-300 transition-colors">Mindscape</h1>
+              <h1 className="font-serif text-xl font-bold text-slate-50 tracking-tight group-hover:text-indigo-300 transition-colors">PsyDream</h1>
             </div>
             
             <nav className="flex items-center gap-4">
@@ -181,10 +181,10 @@ function App() {
       {/* Mobile Header Toggle */}
       <div className="md:hidden fixed top-0 left-0 w-full bg-slate-900/80 border-b border-white/5 p-4 z-50 flex items-center justify-between backdrop-blur-xl">
          <div className="flex items-center gap-2">
-             <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
-                <span className="font-serif font-bold text-white">M</span>
+             <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-indigo-900 to-slate-900 rounded-lg border border-indigo-500/30">
+                <Moon size={16} className="text-indigo-300" />
              </div>
-             <span className="font-serif font-bold text-white">Mindscape</span>
+             <span className="font-serif font-bold text-white tracking-tight">PsyDream</span>
          </div>
          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white">
             <Menu size={24} />

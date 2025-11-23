@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import TiltCard from './TiltCard';
 import Button from './Button';
@@ -27,7 +26,7 @@ const Settings: React.FC = () => {
       
       const link = document.createElement("a");
       link.href = url;
-      link.download = `mindscape_journal_${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `psydream_journal_${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -227,7 +226,7 @@ const Settings: React.FC = () => {
                  <div>
                     <h4 className="text-slate-200 font-medium text-sm">Безопасность данных</h4>
                     <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                       Ваши сны хранятся локально в вашем браузере. Mindscape не передает ваши личные записи на серверы для хранения.
+                       Ваши сны хранятся локально в вашем браузере. PsyDream не передает ваши личные записи на серверы для хранения.
                     </p>
                  </div>
               </div>
@@ -235,7 +234,7 @@ const Settings: React.FC = () => {
 
           {/* Footer Info */}
           <div className="text-center">
-             <p className="text-xs text-slate-600">Mindscape v1.2.0 (Beta)</p>
+             <p className="text-xs text-slate-600">PsyDream v1.2.0 (Beta)</p>
              <div className="flex justify-center gap-4 mt-2">
                 <a href="#" className="text-xs text-slate-500 hover:text-indigo-400">Политика конфиденциальности</a>
                 <a href="#" className="text-xs text-slate-500 hover:text-indigo-400">Условия использования</a>

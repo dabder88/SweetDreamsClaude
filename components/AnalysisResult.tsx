@@ -376,7 +376,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
       {/* --- FOOTER --- */}
       <div className="border-t border-slate-800/50 pt-8 flex flex-wrap gap-6 justify-between items-center mt-8">
         <div className="text-slate-500 text-sm">
-          Анализ выполнен Gemini 3.0 Pro Preview
+          
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Button 
