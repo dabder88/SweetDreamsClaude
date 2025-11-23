@@ -3,11 +3,12 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { DreamData, PsychMethod, AnalysisResponse, DreamSymbol } from "../types";
 
 // --- ROBUST API KEY FETCHING ---
+// Safe accessor that won't crash Vite or Node if env vars are missing
 const getApiKey = (): string => {
   // 1. Try Vite standard (import.meta.env.VITE_API_KEY)
   try {
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    if (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_KEY) {
       // @ts-ignore
       return import.meta.env.VITE_API_KEY;
     }
@@ -16,7 +17,7 @@ const getApiKey = (): string => {
   // 2. Try legacy/standard Node environment (safe access)
   try {
     // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
+    if (typeof process !== 'undefined' && process?.env) {
       // @ts-ignore
       return process.env.API_KEY || process.env.VITE_API_KEY;
     }
@@ -25,13 +26,7 @@ const getApiKey = (): string => {
   return "";
 };
 
-const apiKey = getApiKey();
-const ai = new GoogleGenAI({ apiKey: apiKey });
-
-/**
- * Helper function to clean and parse JSON from AI response.
- * Includes logic to repair cut-off JSON strings.
- */
+// Helper function to clean and parse JSON from AI response.
 const cleanAndParseJSON = (text: string): any => {
   let jsonString = text || "{}";
   
@@ -72,19 +67,24 @@ const cleanAndParseJSON = (text: string): any => {
       return JSON.parse(repaired);
     } catch (e2) {
       console.error("Repair failed", e2);
-      // Return a valid empty object if repair fails entirely to prevent crash
       return {}; 
     }
   }
 };
 
 export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> => {
-  const { description, context, method } = data;
-
+  const apiKey = getApiKey();
+  
+  // CRITICAL FIX: Check key inside the function, not at module level
   if (!apiKey) {
     console.error("CRITICAL: API Key is missing.");
-    throw new Error("API ключ не найден. Проверьте настройки Vercel (VITE_API_KEY).");
+    throw new Error("API Key is missing! Check Vercel Environment Variables (VITE_API_KEY).");
   }
+
+  // Initialize AI only when needed
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+
+  const { description, context, method } = data;
 
   // --- Prepare Method Context ---
   let methodPrompt = "";
@@ -113,7 +113,6 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
   const baseSystemInstruction = "Ты — эксперт-психолог. Пиши структурированно, без воды. Строго соблюдай JSON формат.";
 
   // --- STEP 1: Structure & Deep Analysis ---
-  // We ask for symbols ONLY by name here to save tokens for the deep analysis part.
   const step1Prompt = `
     Ты — профессиональный психоаналитик с 20-летним стажем. Проведи ПЕРВЫЙ ЭТАП анализа сна.
     Язык: РУССКИЙ.
@@ -148,7 +147,7 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
     properties: {
       summary: { type: Type.STRING },
       analysis: { type: Type.STRING },
-      advice: { type: Type.ARRAY, items: { type: Type.STRING } }, // Changed to array
+      advice: { type: Type.ARRAY, items: { type: Type.STRING } },
       questions: { type: Type.ARRAY, items: { type: Type.STRING } },
       symbol_names: { type: Type.ARRAY, items: { type: Type.STRING } }
     },
@@ -173,7 +172,6 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
     const symbolNames: string[] = result1.symbol_names || [];
 
     // --- STEP 2: Detailed Symbolism (PARALLEL REQUESTS) ---
-    // We split each symbol into its own request to guarantee length and avoid JSON cutoff
     let symbolismData: DreamSymbol[] = [];
 
     if (symbolNames.length > 0) {
@@ -206,6 +204,7 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
         };
 
         try {
+          // Initialize new AI instance per request if needed, or reuse
           const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents: step2Prompt,
@@ -214,7 +213,7 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
               responseMimeType: "application/json",
               responseSchema: step2Schema,
               temperature: 0.5,
-              maxOutputTokens: 4000, // Plenty for one symbol
+              maxOutputTokens: 4000,
             }
           });
           return cleanAndParseJSON(response.text) as DreamSymbol;
@@ -224,34 +223,30 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
         }
       });
 
-      // Run all symbol analyses in parallel
       symbolismData = await Promise.all(symbolPromises);
     }
 
     return {
       summary: result1.summary,
       analysis: result1.analysis,
-      advice: Array.isArray(result1.advice) ? result1.advice : [result1.advice || "Совет отсутствует."], // Safety check
+      advice: Array.isArray(result1.advice) ? result1.advice : [result1.advice || "Совет отсутствует."],
       questions: result1.questions,
       symbolism: symbolismData
     };
 
   } catch (error) {
     console.error("Analysis failed", error);
-    return {
-        summary: "Анализ был прерван.",
-        symbolism: [],
-        analysis: "К сожалению, произошла ошибка при генерации отчета. Попробуйте сократить описание сна или повторить запрос чуть позже. \n\n**Важно:** Проверьте API ключ в настройках Vercel (VITE_API_KEY).",
-        advice: ["Попробуйте снова."],
-        questions: []
-    };
+    throw error; // Re-throw to be caught by the UI
   }
 };
 
 export const visualizeDream = async (description: string): Promise<string> => {
-  try {
-    if (!apiKey) throw new Error("API Key Missing (VITE_API_KEY)");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key is missing! Check Vercel Environment Variables (VITE_API_KEY).");
+  
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
+  try {
     const prompt = `A surreal, artistic, and dreamlike digital painting representation of this dream description (interpret the visuals artistically): "${description}". 
     Style: Ethereal, psychological, symbolic, soft lighting, deep atmosphere, high quality concept art, darker tones to match a midnight theme.`;
 
