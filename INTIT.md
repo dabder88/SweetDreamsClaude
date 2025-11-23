@@ -1,32 +1,32 @@
-# Mindscape: Проектная документация v2.0
+# PsyDream: Проектная документация v2.1
 
 ## 1. Обзор проекта
-**Mindscape** — это прогрессивное веб-приложение (SPA) для психологического анализа сновидений. Проект сочетает в себе мастер толкования (Wizard) и полноценный личный кабинет пользователя для отслеживания динамики подсознания.
+**PsyDream** (ранее Mindscape) — это прогрессивное веб-приложение (SPA) для глубокого психологического анализа сновидений. Проект эволюционировал из простого мастера толкования в полноценную платформу с личным кабинетом.
 
-**Ключевая особенность:** Использование двухэтапного анализа через Google Gemini API для обхода ограничений токенов и генерации глубоких, объемных интерпретаций, основанных на научных методах (Юнг, Фрейд, Гештальт, КПТ, Экзистенциализм).
+**Ключевая особенность:** Двухэтапный каскадный анализ через Google Gemini API, обеспечивающий генерацию больших объемов текста без обрывов, и безопасная архитектура подключения к API (Lazy Initialization).
 
 ---
 
 ## 2. Технологический стек
 
-### Core
+### Core & Build
+*   **Vite**: Сборщик проекта (Framework Preset: Vite).
 *   **React 19**: Основной фреймворк.
-*   **TypeScript**: Строгая типизация всех структур данных (`types.ts`).
-*   **Vite / ES Modules**: Работа в браузере через `importmap` и CDN (без локальной сборки в текущей среде).
+*   **TypeScript**: Строгая типизация данных.
 
 ### UI/UX
-*   **Tailwind CSS**: Стилизация.
+*   **Tailwind CSS**: Стилизация (в текущей версии через CDN для быстрого прототипирования).
 *   **Design System "Midnight Glass"**:
     *   Фон: `Slate-950` (Deep Space).
-    *   Эффекты: Glassmorphism (`backdrop-blur`), неоновые свечения (`box-shadow`), градиенты.
-    *   **Starfield**: Интерактивный Canvas-фон с 3D-полем звезд.
-    *   **TiltCard**: Компонент-обертка для карточек (стилизация рамок и фона).
-*   **Icons**: `lucide-react`.
-*   **Charts**: Кастомные SVG-графики (без тяжелых библиотек) для высокой производительности.
+    *   **PsyDream Branding**: Логотип (Луна + Искры), градиенты Индиго/Пурпур.
+    *   **Starfield**: Интерактивный Canvas-фон с 3D-полетом сквозь звезды.
+*   **Charts**: Легковесные SVG-графики в разделе Аналитики.
 
 ### Data & AI
-*   **Google GenAI SDK**: Взаимодействие с Gemini 3.0 Pro Preview и Flash.
-*   **LocalStorage**: Персистентное хранение данных пользователя (Журнал, Настройки).
+*   **Google GenAI SDK**: 
+    *   Текстовый анализ: **`gemini-2.5-flash`** (Выбрана для обхода лимитов Rate Limit бесплатного тарифа).
+    *   Визуализация: **`gemini-2.0-flash-exp`** (Мультимодальная генерация изображений).
+*   **LocalStorage**: Хранение журнала снов и настроек.
 
 ---
 
@@ -34,100 +34,79 @@
 
 ```text
 /
-├── index.html              # Entry point, Global CSS animations
-├── App.tsx                 # Main Router (Wizard vs Cabinet layouts)
-├── types.ts                # Data Models (DreamContext, AnalysisResponse, AppView)
+├── index.html              # Entry point (Vite script module)
+├── App.tsx                 # Main Router & Layout Logic
+├── types.ts                # Data Models
 ├── constants.ts            # Config (Methods, Emotions)
 │
 ├── services/
-│   ├── geminiService.ts    # AI Logic (2-Step Analysis, Prompt Engineering)
+│   ├── geminiService.ts    # AI Logic (Safe Env Access, Lazy Init, 2-Step Flow)
 │   └── storageService.ts   # LocalStorage CRUD
 │
 ├── components/
-│   ├── Sidebar.tsx         # Боковое меню навигации (Adaptive)
+│   ├── LandingPage.tsx     # Стартовая страница (Hero)
+│   ├── Sidebar.tsx         # Навигация кабинета (Mobile/Desktop adaptive)
 │   ├── Dashboard.tsx       # Главная страница кабинета (Widgets)
-│   ├── Analytics.tsx       # Графики и статистика (SVG Charts)
-│   ├── Settings.tsx        # Управление данными и профилем
-│   ├── DreamJournal.tsx    # Список записей (Filtering, Notes)
-│   ├── AnalysisResult.tsx  # Отображение результата (Tabs, Accordions)
-│   ├── DreamForm.tsx       # Шаг 1: Ввод сна
-│   ├── ContextForm.tsx     # Шаг 2: Контекст (Extended fields)
-│   ├── MethodSelector.tsx  # Шаг 3: Выбор метода
+│   ├── Analytics.tsx       # Графики (SVG)
+│   ├── Settings.tsx        # Управление данными (Export JSON)
+│   ├── DreamJournal.tsx    # Список записей (Accordions, Filtering)
+│   ├── AnalysisResult.tsx  # Результат анализа (Tabs: Symbolism, Depth, Advice)
+│   ├── DreamForm.tsx       # Ввод сна
+│   ├── ContextForm.tsx     # Контекст (Extended fields)
+│   ├── MethodSelector.tsx  # Выбор метода
 │   ├── StepIndicator.tsx   # Прогресс-бар
-│   ├── TiltCard.tsx        # UI-wrapper
 │   └── Starfield.tsx       # 3D Background
 │
-└── prompts/                # Документация промптов (md files)
+└── prompts/                # Документация промптов (.md)
 ```
 
 ---
 
 ## 4. Логика работы приложения
 
-### 4.1. Навигация и Layout
-Приложение имеет два основных режима отображения (`AppView`):
-
-1.  **Wizard (Landing)**:
-    *   Стартовая точка входа.
-    *   Содержит хедер с ссылкой в Личный кабинет.
-    *   Пошаговый процесс: Сон -> Контекст -> Метод -> Результат.
-2.  **Cabinet (Dashboard)**:
-    *   Макет с фиксированным **Sidebar** (слева).
-    *   Адаптивность: На мобильных меню скрыто под "гамбургер", на планшетах/ПК (md+) открыто всегда.
-    *   Разделы: Обзор, Журнал, Аналитика, Архетипы (WIP), Настройки.
+### 4.1. Навигация
+*   **Landing Page**: Точка входа. Логотип слева, ссылка на Кабинет справа.
+*   **Wizard**: Процесс толкования (4 шага).
+*   **Cabinet**: Защищенная зона (Dashboard, Journal, Analytics, Settings). Меню фиксировано слева на Desktop, скрыто на Mobile.
 
 ### 4.2. AI Анализ (Two-Step Architecture)
-Для решения проблемы обрыва генерации длинных текстов (JSON cutoff) реализована двухэтапная архитектура в `geminiService.ts`:
+Для решения проблемы обрыва JSON и лимитов токенов:
 
-*   **Шаг 1 (Structure & Deep Dive):**
-    *   Запрос к `gemini-3-pro-preview`.
-    *   Генерация: `summary`, `analysis` (глубокий разбор ситуации), `advice` (список), `questions`.
-    *   **Важно:** ИИ только *называет* символы (`symbol_names`), но не расшифровывает их здесь.
-*   **Шаг 2 (Parallel Symbol Analysis):**
-    *   Берется список символов из Шага 1.
-    *   Для **каждого** символа отправляется отдельный параллельный запрос.
-    *   Промпт требует большого объема (800+ знаков) и строго русского языка.
-    *   Результаты мерджатся в итоговый объект.
+1.  **Шаг 1 (Structure)**: Запрос к `gemini-2.5-flash`. Генерирует структуру, глубокий анализ (`analysis`), советы (`advice` как массив) и список символов.
+2.  **Шаг 2 (Parallel Detail)**: Для каждого символа отправляется **отдельный параллельный запрос**. Это позволяет генерировать по 3-4 абзаца на символ без риска обрыва ответа.
+3.  **Визуализация**: Отдельный запрос к `gemini-2.0-flash-exp` для генерации изображения по описанию сна.
 
-### 4.3. Личный кабинет
-*   **Dashboard**: Виджеты "Инсайт дня" (AI), "Уровень осознанности", статистика, кнопка быстрого старта.
-*   **Analytics**:
-    *   *Emotional Pulse*: SVG-график настроения.
-    *   *Method Spectrum*: Распределение методов анализа.
-    *   *Stats*: Карточки ключевых показателей.
-*   **Settings**:
-    *   Экспорт журнала в JSON.
-    *   Полная очистка данных (Hard Reset).
-    *   Управление UI (язык, уведомления - mock).
+### 4.3. Безопасность и Стабильность
+*   **Lazy Initialization**: Инициализация `GoogleGenAI` происходит *внутри* функции вызова, а не глобально. Это предотвращает падение сайта ("Белый экран") при загрузке, если API ключ отсутствует или некорректен.
+*   **Safe Env Access**: Функция `getApiKey` безопасно проверяет как `import.meta.env`, так и `process.env`.
 
 ---
 
-## 5. Структуры данных (Ключевые обновления)
+## 5. Модели Данных
 
-### DreamContext
-Расширенный контекст для более точного анализа:
+### DreamContext (Расширенный)
 ```typescript
 interface DreamContext {
   emotion: string;
   lifeSituation: string;
   associations: string;
   recurring: boolean;
-  dayResidue: string;       // Дневной остаток (Фрейд)
-  characterType: string;    // Типаж персонажей (прошлое/настоящее)
-  dreamRole: string;        // Роль (Наблюдатель/Герой)
-  physicalSensation: string;// Психосоматика
+  dayResidue: string;        // Дневной остаток
+  characterType: string;     // Типаж (из прошлого/настоящего)
+  dreamRole: string;         // Роль (Наблюдатель/Герой)
+  physicalSensation: string; // Психосоматика
 }
 ```
 
-### AnalysisResponse
-Структура ответа от ИИ:
+### JournalEntry
 ```typescript
-interface AnalysisResponse {
-  summary: string;
-  symbolism: DreamSymbol[]; // { name, meaning }
-  analysis: string;         // Markdown text
-  advice: string[];         // Массив конкретных рекомендаций
-  questions: string[];
+interface JournalEntry {
+  id: string;
+  timestamp: number;
+  dreamData: DreamData;
+  analysis: AnalysisResponse; 
+  imageUrl?: string | null;  // Base64 изображение
+  notes?: string;            // Пользовательские заметки
 }
 ```
 
@@ -135,7 +114,7 @@ interface AnalysisResponse {
 
 ## 6. Особенности Дизайна
 
-*   **Типографика**: Строго регламентированные размеры шрифтов (17px для полей/заголовков на десктопе) для читабельности.
-*   **Спойлеры**: Во вкладке "Символизм" используется Accordion UI с непрозрачными, контрастными плашками (Indigo/Slate theme).
-*   **Компактность**: Dashboard Hero-секция оптимизирована по высоте, убраны лишние отступы.
-*   **Атмосфера**: 3D-звезды (`Starfield`) + Анимированные фоновые пятна создают эффект глубины ("Mindscape").
+*   **PsyDream Brand**: Атмосфера "Полночь". Темно-синие тона (`Slate-950`), акценты `Indigo-500` и `Purple-500`.
+*   **Типографика**: Шрифт `Lora` (Serif) для заголовков, `Inter` (Sans) для текста. Размеры шрифтов строго регламентированы (17px body).
+*   **Спойлеры**: Непрозрачные, контрастные аккордеоны во вкладке "Символизм".
+*   **Компактность**: Оптимизированные отступы в Dashboard для максимальной информационной плотности.
