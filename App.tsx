@@ -261,7 +261,7 @@ function App() {
         
         {/* View Router */}
         <div className="max-w-6xl mx-auto">
-          {view === 'dashboard' && <Dashboard onNavigate={navigateTo} />}
+          {view === 'dashboard' && <Dashboard onNavigate={navigateTo} user={user} />}
           {view === 'journal' && <DreamJournal />}
           {view === 'analytics' && <Analytics />}
           {view === 'settings' && <Settings />}

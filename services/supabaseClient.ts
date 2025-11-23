@@ -12,9 +12,18 @@ const getSupabaseAnonKey = (): string => {
 const supabaseUrl = getSupabaseUrl();
 const supabaseAnonKey = getSupabaseAnonKey();
 
+// Log Supabase configuration status
+console.log('🔧 [Supabase] Initializing client...');
+console.log('🔧 [Supabase] URL configured:', !!supabaseUrl);
+console.log('🔧 [Supabase] URL value:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
+console.log('🔧 [Supabase] Anon Key configured:', !!supabaseAnonKey);
+console.log('🔧 [Supabase] Anon Key length:', supabaseAnonKey ? supabaseAnonKey.length : 0);
+
 // Helper to check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
-  return Boolean(supabaseUrl && supabaseAnonKey);
+  const configured = Boolean(supabaseUrl && supabaseAnonKey);
+  console.log('🔧 [Supabase] Is configured:', configured);
+  return configured;
 };
 
 // Create Supabase client only if configured

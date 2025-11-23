@@ -1,14 +1,32 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Sparkles, Brain, Calendar, ArrowRight } from 'lucide-react';
 import TiltCard from './TiltCard';
-import { AppView } from '../types';
+import { AppView, User, JournalEntry } from '../types';
+import { getJournalEntries } from '../services/supabaseStorageService';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
+  user: User | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEntries = async () => {
+      try {
+        const loadedEntries = await getJournalEntries();
+        setEntries(loadedEntries);
+      } catch (error) {
+        console.error('Error loading entries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEntries();
+  }, []);
   return (
     <div className="animate-fade-in space-y-8">
       
@@ -25,23 +43,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                  <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Подсознание активно</span>
                </div>
                <h2 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2 leading-tight">
-                 Добрый вечер, Антон!
+                 Добрый вечер{user ? `, ${user.email.split('@')[0]}` : ''}!
                </h2>
                <p className="text-indigo-100/80 text-lg max-w-xl mb-4">
-                 Ваше последнее сновидение содержало сильные архетипические образы. Готовы исследовать их значение?
+                 {entries.length > 0
+                   ? 'Ваше последнее сновидение содержало сильные архетипические образы. Готовы исследовать их значение?'
+                   : 'Начните вести дневник снов и получайте персональные инсайты о вашем подсознании.'
+                 }
                </p>
                
                <div className="flex flex-wrap gap-3">
-                 <button 
+                 <button
                    onClick={() => onNavigate('wizard')}
                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all active:scale-95 flex items-center gap-2"
                  >
                    <Plus size={18} />
                    Растолковать новый сон
                  </button>
-                 <div className="px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-indigo-200 text-sm flex items-center">
-                   Осталось 2 толкования сегодня
-                 </div>
+                 {entries.length > 0 && (
+                   <div className="px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-indigo-200 text-sm flex items-center">
+                     {entries.length} {entries.length === 1 ? 'сон' : entries.length < 5 ? 'сна' : 'снов'} в дневнике
+                   </div>
+                 )}
                </div>
             </div>
          </div>
@@ -77,9 +100,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs font-bold border border-indigo-500/30">ИССЛЕДОВАТЕЛЬ</span>
              </div>
              
-             <div className="text-right text-xs text-slate-400 mb-2">0 / 10 снов</div>
+             <div className="text-right text-xs text-slate-400 mb-2">{entries.length} / 10 снов</div>
              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-6">
-                <div className="h-full w-[30%] bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-500"
+                  style={{ width: `${Math.min((entries.length / 10) * 100, 100)}%` }}
+                ></div>
              </div>
 
              <button className="w-full py-3 rounded-lg bg-gradient-to-r from-amber-600/20 to-amber-500/20 border border-amber-500/30 text-amber-200 font-bold text-sm hover:bg-amber-500/30 transition-all flex items-center justify-center gap-2">
@@ -102,17 +128,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div>
         <div className="flex items-center justify-between mb-6">
            <h3 className="text-2xl font-serif font-bold text-white">Последние сны</h3>
-           <button 
+           <button
              onClick={() => onNavigate('journal')}
              className="text-slate-400 hover:text-white text-sm flex items-center gap-1 transition-colors"
            >
              Показать все <ArrowRight size={14}/>
            </button>
         </div>
-        
-        <div className="glass-panel border border-dashed border-slate-800 rounded-xl p-12 text-center">
-           <p className="text-slate-500">У вас пока нет записей. Самое время начать!</p>
-        </div>
+
+        {loading ? (
+          <div className="glass-panel border border-dashed border-slate-800 rounded-xl p-12 text-center">
+            <p className="text-slate-500">Загрузка...</p>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="glass-panel border border-dashed border-slate-800 rounded-xl p-12 text-center">
+            <p className="text-slate-500">У вас пока нет записей. Самое время начать!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {entries.slice(0, 3).map((entry) => {
+              const date = new Date(entry.timestamp);
+              const dreamText = entry.dreamData.description.substring(0, 150) + (entry.dreamData.description.length > 150 ? '...' : '');
+
+              return (
+                <TiltCard
+                  key={entry.id}
+                  className="glass-panel p-5 rounded-xl border border-slate-800 hover:border-indigo-500/30 transition-all cursor-pointer"
+                  onClick={() => onNavigate('journal')}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-white text-lg mb-1">
+                        {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-medium border border-indigo-500/30">
+                      {entry.dreamData.method === 'jungian' ? 'Юнгианский' :
+                       entry.dreamData.method === 'freudian' ? 'Фрейдовский' :
+                       entry.dreamData.method === 'gestalt' ? 'Гештальт' :
+                       entry.dreamData.method === 'cognitive' ? 'Когнитивный' :
+                       entry.dreamData.method === 'existential' ? 'Экзистенциальный' :
+                       'Авто'}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    {dreamText}
+                  </p>
+                </TiltCard>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>
