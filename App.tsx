@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { DreamData, PsychMethod, AppView } from './types';
+import React, { useState, useRef, useEffect } from 'react';
+import { DreamData, PsychMethod, AppView, User } from './types';
 import StepIndicator from './components/StepIndicator';
 import DreamForm from './components/DreamForm';
 import ContextForm from './components/ContextForm';
@@ -13,8 +13,12 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
-import { ArrowRight, ArrowLeft, User, Menu, Ghost, Moon, Sparkles } from 'lucide-react';
+import Auth from './components/Auth';
+import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles } from 'lucide-react';
 import TiltCard from './components/TiltCard';
+import { getCurrentUser, onAuthStateChange } from './services/authService';
+import { isSupabaseConfigured } from './services/supabaseClient';
+import { migrateLocalEntriesToSupabase } from './services/supabaseStorageService';
 
 const INITIAL_DATA: DreamData = {
   description: '',
@@ -37,11 +41,51 @@ function App() {
   const [step, setStep] = useState(1);
   const [dreamData, setDreamData] = useState<DreamData>(INITIAL_DATA);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
   const blob3Ref = useRef<HTMLDivElement>(null);
   const blob4Ref = useRef<HTMLDivElement>(null);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isSupabaseConfigured()) {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+
+        // Migrate local entries to Supabase if user is authenticated
+        if (currentUser) {
+          const migratedCount = await migrateLocalEntriesToSupabase();
+          if (migratedCount > 0) {
+            console.log(`Migrated ${migratedCount} entries to Supabase`);
+          }
+        }
+      }
+      setAuthLoading(false);
+    };
+
+    checkAuth();
+
+    // Subscribe to auth state changes
+    if (isSupabaseConfigured()) {
+      const { data: authListener } = onAuthStateChange((newUser) => {
+        setUser(newUser);
+        if (!newUser && view !== 'landing' && view !== 'wizard') {
+          // User logged out, redirect to landing
+          setView('landing');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+
+      return () => {
+        authListener?.subscription?.unsubscribe();
+      };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDreamChange = (description: string) => {
     setDreamData(prev => ({ ...prev, description }));
@@ -84,9 +128,24 @@ function App() {
   };
 
   const navigateTo = (newView: AppView) => {
+    // Protect private views - require authentication if Supabase is configured
+    const privateViews: AppView[] = ['dashboard', 'journal', 'analytics', 'settings', 'archetypes'];
+
+    if (isSupabaseConfigured() && privateViews.includes(newView) && !user) {
+      setView('auth');
+      setMobileMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setView(newView);
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAuthSuccess = () => {
+    // After successful auth, navigate to dashboard
+    navigateTo('dashboard');
   };
 
   // --- RENDER WIZARD LAYOUT (Interpretation Process) ---
@@ -104,11 +163,11 @@ function App() {
             </div>
             
             <nav className="flex items-center gap-4">
-               <button 
+               <button
                 onClick={() => navigateTo('dashboard')}
                 className="flex items-center gap-2 text-sm font-medium text-indigo-200 hover:text-white transition-colors bg-indigo-900/30 hover:bg-indigo-600 px-4 py-2 rounded-full border border-indigo-500/30 hover:border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
                >
-                 <User size={16} />
+                 <UserIcon size={16} />
                  <span className="hidden sm:inline">Личный кабинет</span>
                </button>
             </nav>
@@ -192,9 +251,9 @@ function App() {
       </div>
 
       {/* Sidebar (Hidden on mobile unless toggled) */}
-      <div className={`fixed md:sticky top-0 left-0 h-screen z-50 transition-transform duration-300 transform 
+      <div className={`fixed md:sticky top-0 left-0 h-screen z-50 transition-transform duration-300 transform
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <Sidebar currentView={view} onChangeView={navigateTo} />
+        <Sidebar currentView={view} onChangeView={navigateTo} user={user} />
       </div>
 
       {/* Main Content Area */}
@@ -244,15 +303,24 @@ function App() {
       </div>
 
       {/* Logic to choose layout based on current View */}
-      {view === 'landing' ? (
-         <LandingPage 
-            onStart={() => navigateTo('wizard')} 
-            onGoToCabinet={() => navigateTo('dashboard')} 
-         />
+      {authLoading ? (
+        <div className="relative z-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Moon size={48} className="text-indigo-400 animate-pulse mx-auto mb-4" />
+            <p className="text-slate-400">Загрузка...</p>
+          </div>
+        </div>
+      ) : view === 'auth' ? (
+        <Auth onAuthSuccess={handleAuthSuccess} />
+      ) : view === 'landing' ? (
+        <LandingPage
+          onStart={() => navigateTo('wizard')}
+          onGoToCabinet={() => navigateTo('dashboard')}
+        />
       ) : view === 'wizard' ? (
-         renderWizardLayout()
+        renderWizardLayout()
       ) : (
-         renderCabinetLayout()
+        renderCabinetLayout()
       )}
 
     </div>

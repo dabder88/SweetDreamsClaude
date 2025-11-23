@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeDream, visualizeDream } from '../services/geminiService';
-import { saveJournalEntry } from '../services/storageService';
+import { saveJournalEntry } from '../services/supabaseStorageService';
 import { DreamData, JournalEntry, AnalysisResponse, DreamSymbol } from '../types';
 import { RefreshCw, Image as ImageIcon, Check, Save, Sparkles, Layers, Compass, Key, ChevronDown } from 'lucide-react';
 import Button from './Button';

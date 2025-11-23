@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { JournalEntry, AnalysisResponse } from '../types';
-import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/storageService';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/supabaseStorageService';
 import { Trash2, Calendar, BookOpen, ChevronDown, ChevronUp, MessageSquare, Filter, Sparkles, Key, Layers } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { PSYCH_METHODS, PREBUILT_EMOTIONS } from '../constants';
@@ -16,14 +16,20 @@ const DreamJournal: React.FC = () => {
   const [noteText, setNoteText] = useState('');
 
   useEffect(() => {
-    setEntries(getJournalEntries());
+    const loadEntries = async () => {
+      const loadedEntries = await getJournalEntries();
+      setEntries(loadedEntries);
+    };
+    loadEntries();
   }, []);
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Вы уверены, что хотите удалить эту запись?')) {
-      deleteJournalEntry(id);
-      setEntries(entries.filter(entry => entry.id !== id));
+      const success = await deleteJournalEntry(id);
+      if (success) {
+        setEntries(entries.filter(entry => entry.id !== id));
+      }
     }
   };
 
@@ -31,10 +37,12 @@ const DreamJournal: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleSaveNote = (id: string) => {
-    updateJournalEntry(id, { notes: noteText });
-    setEntries(entries.map(e => e.id === id ? { ...e, notes: noteText } : e));
-    setEditingNoteId(null);
+  const handleSaveNote = async (id: string) => {
+    const success = await updateJournalEntry(id, { notes: noteText });
+    if (success) {
+      setEntries(entries.map(e => e.id === id ? { ...e, notes: noteText } : e));
+      setEditingNoteId(null);
+    }
   };
 
   const startEditingNote = (entry: JournalEntry, e: React.MouseEvent) => {

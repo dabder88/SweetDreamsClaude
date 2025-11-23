@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import TiltCard from './TiltCard';
 import Button from './Button';
-import { 
-  User, Mail, Bell, Shield, Download, Trash2, 
-  CreditCard, Check, AlertTriangle, Moon, Globe 
+import {
+  User, Mail, Bell, Shield, Download, Trash2,
+  CreditCard, Check, AlertTriangle, Moon, Globe
 } from 'lucide-react';
-import { getJournalEntries } from '../services/storageService';
+import { getJournalEntries } from '../services/supabaseStorageService';
 
 const Settings: React.FC = () => {
   const [loadingExport, setLoadingExport] = useState(false);
@@ -16,14 +16,14 @@ const Settings: React.FC = () => {
 
   // --- ACTIONS ---
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     setLoadingExport(true);
     try {
-      const data = getJournalEntries();
+      const data = await getJournalEntries();
       const jsonString = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement("a");
       link.href = url;
       link.download = `psydream_journal_${new Date().toISOString().slice(0, 10)}.json`;

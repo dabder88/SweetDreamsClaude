@@ -1,14 +1,24 @@
 
 import React from 'react';
 import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User } from 'lucide-react';
-import { AppView } from '../types';
+import { AppView, User as UserType } from '../types';
+import { signOut } from '../services/authService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 interface SidebarProps {
   currentView: AppView;
   onChangeView: (view: AppView) => void;
+  user: UserType | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) => {
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured() && user) {
+      await signOut();
+    }
+    onChangeView('landing');
+  };
   
   const menuItems = [
     { id: 'dashboard', label: 'Обзор', icon: LayoutDashboard },
@@ -29,8 +39,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
            </div>
            <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 border-4 border-slate-900 rounded-full" title="Онлайн"></div>
         </div>
-        <h3 className="text-white font-serif font-bold text-xl tracking-wide">Антон</h3>
-        <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1">Искатель смыслов</span>
+        {user ? (
+          <>
+            <h3 className="text-white font-serif font-bold text-xl tracking-wide truncate w-full text-center" title={user.email}>
+              {user.email.split('@')[0]}
+            </h3>
+            <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1">Искатель смыслов</span>
+          </>
+        ) : (
+          <>
+            <h3 className="text-white font-serif font-bold text-xl tracking-wide">Гость</h3>
+            <span className="text-xs text-slate-500 mt-1">Локальный режим</span>
+          </>
+        )}
       </div>
 
       {/* Navigation */}
@@ -60,12 +81,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
 
       {/* Footer Action */}
       <div className="p-4 border-t border-white/5">
-        <button 
-          onClick={() => onChangeView('wizard')}
+        <button
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-900/10 rounded-xl transition-colors"
         >
           <LogOut size={20} />
-          <span className="font-medium">Выйти на главную</span>
+          <span className="font-medium">{user ? 'Выйти из аккаунта' : 'Выйти на главную'}</span>
         </button>
       </div>
     </aside>

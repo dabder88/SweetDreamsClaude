@@ -38,8 +38,15 @@ export interface AnalysisResponse {
   questions: string[];
 }
 
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
 export interface JournalEntry {
   id: string;
+  user_id?: string; // Optional for backward compatibility with localStorage
   timestamp: number;
   dreamData: DreamData;
   analysis: AnalysisResponse | string; // Support legacy string or new structured object
@@ -47,4 +54,4 @@ export interface JournalEntry {
   notes?: string;
 }
 
-export type AppView = 'wizard' | 'landing' | 'dashboard' | 'journal' | 'analytics' | 'archetypes' | 'settings';
+export type AppView = 'wizard' | 'landing' | 'dashboard' | 'journal' | 'analytics' | 'archetypes' | 'settings' | 'auth';
