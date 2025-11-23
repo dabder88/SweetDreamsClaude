@@ -252,16 +252,21 @@ export const visualizeDream = async (description: string): Promise<string> => {
     const prompt = `A surreal, artistic, and dreamlike digital painting representation of this dream description (interpret the visuals artistically): "${description}". 
     Style: Ethereal, psychological, symbolic, soft lighting, deep atmosphere, high quality concept art, darker tones to match a midnight theme.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: prompt,
+    const response = await ai.models.generateImages({
+      model: 'imagen-3.0-generate-001',
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+      }
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
+    // @ts-ignore
+    const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
+    
+    if (imageBytes) {
+      return `data:image/png;base64,${imageBytes}`;
     }
+    
     throw new Error("Изображение не сгенерировано");
   } catch (error) {
     console.error("Visualization failed", error);

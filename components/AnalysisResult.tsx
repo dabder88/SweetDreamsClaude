@@ -182,7 +182,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
           {LOADING_MESSAGES[loadingMsgIndex]}
         </h3>
         <p className="text-indigo-300/80 mt-6 text-sm uppercase tracking-[0.25em] font-bold">
-          Gemini 3 Pro анализирует...
+          Анализируем ваш сон...
         </p>
       </div>
     );
