@@ -2,6 +2,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { DreamData, PsychMethod, AnalysisResponse, DreamSymbol } from "../types";
 
+// Fix: Use process.env.API_KEY as per guidelines. Assume it's defined and valid.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
@@ -212,7 +213,7 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
     return {
         summary: "Анализ был прерван.",
         symbolism: [],
-        analysis: "К сожалению, произошла ошибка при генерации отчета. Попробуйте сократить описание сна или повторить запрос чуть позже.",
+        analysis: "К сожалению, произошла ошибка при генерации отчета. Попробуйте сократить описание сна или повторить запрос чуть позже. (Проверьте API KEY)",
         advice: ["Попробуйте снова."],
         questions: []
     };

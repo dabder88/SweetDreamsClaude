@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
+import LandingPage from './components/LandingPage';
 import { ArrowRight, ArrowLeft, User, Menu, Ghost } from 'lucide-react';
 import TiltCard from './components/TiltCard';
 
@@ -32,8 +33,8 @@ const INITIAL_DATA: DreamData = {
 };
 
 function App() {
-  // Default view is 'wizard' (landing page) per user request
-  const [view, setView] = useState<AppView>('wizard');
+  // Start at 'landing' page per user request
+  const [view, setView] = useState<AppView>('landing');
   const [step, setStep] = useState(1);
   const [dreamData, setDreamData] = useState<DreamData>(INITIAL_DATA);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -89,13 +90,13 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- RENDER WIZARD LAYOUT (Current Landing) ---
+  // --- RENDER WIZARD LAYOUT (Interpretation Process) ---
   const renderWizardLayout = () => (
     <div className="relative z-20 flex flex-col min-h-screen pb-20">
-       {/* Header with Cabinet Link */}
+       {/* Simple Header for Wizard */}
        <header className="bg-slate-900/40 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => resetApp()}>
+            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo('landing')}>
               <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-transform group-hover:scale-105 border border-indigo-400/30">
                 <span className="text-white font-serif font-bold text-xl">M</span>
               </div>
@@ -115,18 +116,6 @@ function App() {
         </header>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-grow w-full">
-              {/* Intro Hero (Only show on Step 1) */}
-              {step === 1 && dreamData.description === '' && (
-                <div className="text-center mb-16 animate-fade-in mt-8">
-                  <h1 className="text-5xl md:text-7xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-slate-300 mb-8 drop-shadow-[0_0_35px_rgba(255,255,255,0.15)] tracking-tight">
-                    Мудрость<br/>Сновидений
-                  </h1>
-                  <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed font-light tracking-wide">
-                    Погрузитесь в глубины подсознания. <span className="text-indigo-300 font-normal">Психологический анализ</span> без мистики, основанный на научных подходах.
-                  </p>
-                </div>
-              )}
-
               {/* Progress */}
               {step < 4 && <StepIndicator currentStep={step} totalSteps={4} />}
 
@@ -174,10 +163,6 @@ function App() {
                 </div>
               )}
         </main>
-        
-        <footer className="text-center py-8 text-slate-500 text-sm relative z-10">
-          <p>&copy; {new Date().getFullYear()} Mindscape. Все права защищены.</p>
-        </footer>
     </div>
   );
 
@@ -258,8 +243,17 @@ function App() {
         </div>
       </div>
 
-      {/* Route Logic */}
-      {view === 'wizard' ? renderWizardLayout() : renderCabinetLayout()}
+      {/* Logic to choose layout based on current View */}
+      {view === 'landing' ? (
+         <LandingPage 
+            onStart={() => navigateTo('wizard')} 
+            onGoToCabinet={() => navigateTo('dashboard')} 
+         />
+      ) : view === 'wizard' ? (
+         renderWizardLayout()
+      ) : (
+         renderCabinetLayout()
+      )}
 
     </div>
   );
