@@ -2,8 +2,31 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { DreamData, PsychMethod, AnalysisResponse, DreamSymbol } from "../types";
 
-// Fix: Use process.env.API_KEY as per guidelines. Assume it's defined and valid.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// --- ROBUST API KEY FETCHING ---
+const getApiKey = (): string => {
+  // 1. Try Vite standard (import.meta.env.VITE_API_KEY)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      return import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {}
+
+  // 2. Try legacy/standard Node environment (safe access)
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env) {
+      // @ts-ignore
+      return process.env.API_KEY || process.env.VITE_API_KEY;
+    }
+  } catch (e) {}
+
+  return "";
+};
+
+const apiKey = getApiKey();
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 /**
  * Helper function to clean and parse JSON from AI response.
@@ -57,6 +80,11 @@ const cleanAndParseJSON = (text: string): any => {
 
 export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> => {
   const { description, context, method } = data;
+
+  if (!apiKey) {
+    console.error("CRITICAL: API Key is missing.");
+    throw new Error("API ключ не найден. Проверьте настройки Vercel (VITE_API_KEY).");
+  }
 
   // --- Prepare Method Context ---
   let methodPrompt = "";
@@ -213,7 +241,7 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
     return {
         summary: "Анализ был прерван.",
         symbolism: [],
-        analysis: "К сожалению, произошла ошибка при генерации отчета. Попробуйте сократить описание сна или повторить запрос чуть позже. (Проверьте API KEY)",
+        analysis: "К сожалению, произошла ошибка при генерации отчета. Попробуйте сократить описание сна или повторить запрос чуть позже. \n\n**Важно:** Проверьте API ключ в настройках Vercel (VITE_API_KEY).",
         advice: ["Попробуйте снова."],
         questions: []
     };
@@ -222,6 +250,8 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
 
 export const visualizeDream = async (description: string): Promise<string> => {
   try {
+    if (!apiKey) throw new Error("API Key Missing (VITE_API_KEY)");
+
     const prompt = `A surreal, artistic, and dreamlike digital painting representation of this dream description (interpret the visuals artistically): "${description}". 
     Style: Ethereal, psychological, symbolic, soft lighting, deep atmosphere, high quality concept art, darker tones to match a midnight theme.`;
 
