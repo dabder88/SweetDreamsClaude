@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
 import Tooltip from './Tooltip';
 import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles } from 'lucide-react';
-import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, EmotionRecord } from '../services/statsService';
+import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, getSymbolFrequency, EmotionRecord, SymbolFrequency } from '../services/statsService';
 import { getJournalEntries } from '../services/supabaseStorageService';
 import { JournalEntry, PsychMethod } from '../types';
 import { PSYCH_METHODS } from '../constants';
@@ -41,6 +41,12 @@ interface InsightStats {
     length: number;
     date: string;
   } | null;
+}
+
+interface SymbolStat {
+  symbol: string;
+  count: number;
+  percentage: number;
 }
 
 /**
@@ -182,6 +188,7 @@ const Analytics: React.FC = () => {
     avgDescriptionLength: 0,
     longestDream: null
   });
+  const [symbolStats, setSymbolStats] = useState<SymbolStat[]>([]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -259,6 +266,20 @@ const Analytics: React.FC = () => {
           .sort((a, b) => b.count - a.count);
 
         setEmotionStats(emotionStatsData);
+
+        // Calculate symbol statistics from ALL analyzed dreams
+        const symbolFrequency = getSymbolFrequency();
+        const totalSymbols = Object.values(symbolFrequency).reduce((sum, count) => sum + count, 0);
+
+        const symbolStatsData: SymbolStat[] = Object.entries(symbolFrequency)
+          .map(([symbol, count]) => ({
+            symbol,
+            count,
+            percentage: totalSymbols > 0 ? (count / totalSymbols) * 100 : 0
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        setSymbolStats(symbolStatsData);
 
         // Calculate insights and patterns
         if (entries.length > 0) {
@@ -651,6 +672,102 @@ const Analytics: React.FC = () => {
                 </div>
               </TiltCard>
             </Tooltip>
+          </div>
+        </div>
+      )}
+
+      {/* Symbolism and Themes Section */}
+      {!loading && symbolStats.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-xl font-serif font-bold text-white">Символика и темы</h3>
+            <Tooltip content="Самые частые символы из всех проанализированных снов. Показывает повторяющиеся темы подсознания" position="right">
+              <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold cursor-help hover:bg-slate-600 transition-colors">
+                ?
+              </div>
+            </Tooltip>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Symbol Cloud */}
+            <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
+              <h4 className="text-md font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <Sparkles size={16} className="text-indigo-400" />
+                Облако символов
+              </h4>
+
+              {symbolStats.length === 0 ? (
+                <div className="flex items-center justify-center h-48 text-slate-500">
+                  Нет данных о символах
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 justify-center items-center min-h-[200px] p-4">
+                  {symbolStats.slice(0, 20).map((stat, idx) => {
+                    // Calculate font size based on frequency (12px to 32px)
+                    const minSize = 12;
+                    const maxSize = 32;
+                    const maxCount = symbolStats[0].count;
+                    const fontSize = minSize + ((stat.count / maxCount) * (maxSize - minSize));
+
+                    // Color variation based on frequency
+                    const colors = [
+                      'text-indigo-300',
+                      'text-purple-300',
+                      'text-pink-300',
+                      'text-blue-300',
+                      'text-cyan-300',
+                      'text-teal-300',
+                      'text-emerald-300',
+                      'text-amber-300'
+                    ];
+                    const color = colors[idx % colors.length];
+
+                    return (
+                      <Tooltip
+                        key={idx}
+                        content={`${stat.symbol}: ${stat.count} раз (${stat.percentage.toFixed(1)}%)`}
+                        position="top"
+                      >
+                        <span
+                          className={`${color} font-serif font-bold cursor-help hover:scale-110 transition-transform duration-200`}
+                          style={{ fontSize: `${fontSize}px` }}
+                        >
+                          {stat.symbol}
+                        </span>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
+            </TiltCard>
+
+            {/* Top Symbols List */}
+            <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
+              <h4 className="text-md font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <Target size={16} className="text-amber-400" />
+                Топ-10 символов
+              </h4>
+
+              <div className="space-y-3">
+                {symbolStats.slice(0, 10).map((stat, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-center w-8 h-8 bg-slate-900 rounded-lg flex-shrink-0">
+                        <span className="text-sm font-bold text-indigo-400">#{idx + 1}</span>
+                      </div>
+                      <span className="text-slate-200 font-medium truncate">{stat.symbol}</span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-slate-400 text-sm">{stat.count} {stat.count === 1 ? 'раз' : 'раз'}</span>
+                      <span className="text-indigo-300 font-bold min-w-[40px] text-right">{stat.percentage.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TiltCard>
           </div>
         </div>
       )}

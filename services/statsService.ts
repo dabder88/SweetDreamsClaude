@@ -16,11 +16,16 @@ export interface EmotionRecord {
   timestamp: number;
 }
 
+export interface SymbolFrequency {
+  [symbol: string]: number; // symbol name -> count
+}
+
 export interface UserStats {
   totalAnalyzedDreams: number; // Total number of dreams analyzed (saved or not)
   lastAnalysisTimestamp?: number;
   methodUsage?: MethodUsageStats; // Track which methods were used and how many times
   emotionHistory?: EmotionRecord[]; // Track emotions over time
+  symbolFrequency?: SymbolFrequency; // Track symbol occurrences
 }
 
 /**
@@ -39,7 +44,8 @@ export const getUserStats = (): UserStats => {
   return {
     totalAnalyzedDreams: 0,
     methodUsage: {},
-    emotionHistory: []
+    emotionHistory: [],
+    symbolFrequency: {}
   };
 };
 
@@ -137,4 +143,37 @@ export const recordEmotion = (emotion: string): void => {
 export const getEmotionHistory = (): EmotionRecord[] => {
   const stats = getUserStats();
   return stats.emotionHistory || [];
+};
+
+/**
+ * Record symbols from dream analysis
+ * Called whenever a dream is analyzed with symbols
+ */
+export const recordSymbols = (symbolNames: string[]): void => {
+  try {
+    const stats = getUserStats();
+
+    // Initialize symbolFrequency if it doesn't exist
+    if (!stats.symbolFrequency) {
+      stats.symbolFrequency = {};
+    }
+
+    // Increment count for each symbol
+    symbolNames.forEach(symbol => {
+      stats.symbolFrequency![symbol] = (stats.symbolFrequency![symbol] || 0) + 1;
+    });
+
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    console.log(`✅ Recorded ${symbolNames.length} symbols (total unique: ${Object.keys(stats.symbolFrequency).length})`);
+  } catch (e) {
+    console.error('Failed to record symbols:', e);
+  }
+};
+
+/**
+ * Get symbol frequency statistics
+ */
+export const getSymbolFrequency = (): SymbolFrequency => {
+  const stats = getUserStats();
+  return stats.symbolFrequency || {};
 };

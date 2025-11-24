@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeDream, visualizeDream } from '../services/geminiService';
 import { saveJournalEntry } from '../services/supabaseStorageService';
-import { incrementAnalyzedDreams, recordMethodUsage, recordEmotion } from '../services/statsService';
+import { incrementAnalyzedDreams, recordMethodUsage, recordEmotion, recordSymbols } from '../services/statsService';
 import { DreamData, JournalEntry, AnalysisResponse, DreamSymbol } from '../types';
 import { RefreshCw, Image as ImageIcon, Check, Save, Sparkles, Layers, Compass, Key, ChevronDown, AlertCircle } from 'lucide-react';
 import Button from './Button';
@@ -143,6 +143,12 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
 
         // Record emotion for statistics
         recordEmotion(data.context.emotion);
+
+        // Record symbols for statistics
+        if (analysisData.symbolism && analysisData.symbolism.length > 0) {
+          const symbolNames = analysisData.symbolism.map(s => s.name);
+          recordSymbols(symbolNames);
+        }
 
         // Notify parent that analysis is complete
         if (onAnalysisComplete) {
