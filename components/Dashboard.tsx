@@ -4,17 +4,94 @@ import { Plus, Sparkles, Brain, Calendar, ArrowRight } from 'lucide-react';
 import TiltCard from './TiltCard';
 import { AppView, User, JournalEntry } from '../types';
 import { getJournalEntries } from '../services/supabaseStorageService';
-import { getTotalAnalyzedDreams } from '../services/statsService';
+import { getTotalAnalyzedDreams, getUserStats, getSymbolFrequency, getEmotionHistory } from '../services/statsService';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
   user: User | null;
 }
 
+/**
+ * Generate daily insight based on user's dream patterns
+ */
+const generateDailyInsight = (entries: JournalEntry[]): string => {
+  if (entries.length === 0) {
+    return "Начните записывать сны, и мы сможем предоставить вам персонализированные инсайты о вашем подсознании.";
+  }
+
+  const insights: string[] = [];
+
+  // Analyze recent symbols
+  const symbolFrequency = getSymbolFrequency();
+  const topSymbols = Object.entries(symbolFrequency)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3);
+
+  if (topSymbols.length > 0) {
+    const [topSymbol, count] = topSymbols[0];
+    if (count >= 3) {
+      insights.push(`Символ "${topSymbol}" появляется в ваших снах ${count} раз. Это может указывать на важную тему в вашей жизни.`);
+    }
+  }
+
+  // Analyze recent emotions
+  const emotionHistory = getEmotionHistory();
+  if (emotionHistory.length >= 3) {
+    const recentEmotions = emotionHistory.slice(-5);
+    const emotionCounts: { [key: string]: number } = {};
+    recentEmotions.forEach(e => {
+      emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1;
+    });
+    const dominantEmotion = Object.entries(emotionCounts).sort(([, a], [, b]) => b - a)[0];
+    if (dominantEmotion && dominantEmotion[1] >= 2) {
+      const [emotion] = dominantEmotion;
+      if (emotion === 'anxiety' || emotion === 'тревога') {
+        insights.push("В последних снах преобладает тревога. Возможно, стоит уделить внимание техникам релаксации перед сном.");
+      } else if (emotion === 'joy' || emotion === 'радость') {
+        insights.push("Ваши последние сны наполнены позитивными эмоциями. Это отражение гармоничного состояния.");
+      } else if (emotion === 'fear' || emotion === 'страх') {
+        insights.push("Страх в снах может указывать на внутренние барьеры, которые готовы быть преодолёнными.");
+      }
+    }
+  }
+
+  // Analyze dream frequency
+  if (entries.length >= 7) {
+    const lastWeek = entries.filter(e => e.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000);
+    if (lastWeek.length >= 5) {
+      insights.push("Вы активно ведёте дневник снов! Регулярная практика усиливает осознанность сновидений.");
+    }
+  }
+
+  // Analyze recurring patterns
+  const recurringCount = entries.filter(e => e.dreamData.context?.isRecurring).length;
+  if (recurringCount >= 2) {
+    insights.push(`У вас ${recurringCount} повторяющихся снов. Они часто несут важные послания от подсознания.`);
+  }
+
+  // Analyze method diversity
+  const stats = getUserStats();
+  const methodCount = Object.keys(stats.methodUsage || {}).length;
+  if (methodCount >= 4) {
+    insights.push("Вы исследуете сны через разные психологические методы. Это даёт более полное понимание.");
+  } else if (methodCount === 1) {
+    insights.push("Попробуйте разные методы анализа! Каждый подход раскрывает уникальные аспекты снов.");
+  }
+
+  // Return random insight or default
+  if (insights.length > 0) {
+    const randomIndex = Math.floor(Math.random() * insights.length);
+    return insights[randomIndex];
+  }
+
+  return "Продолжайте записывать сны — каждая запись приближает вас к пониманию языка подсознания.";
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalAnalyzed, setTotalAnalyzed] = useState(0);
+  const [dailyInsight, setDailyInsight] = useState<string>('');
 
   useEffect(() => {
     const loadEntries = async () => {
@@ -25,6 +102,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
         // Load total analyzed dreams count (separate from saved entries)
         const analyzed = getTotalAnalyzedDreams();
         setTotalAnalyzed(analyzed);
+
+        // Generate daily insight
+        const insight = generateDailyInsight(loadedEntries);
+        setDailyInsight(insight);
       } catch (error) {
         console.error('Error loading entries:', error);
       } finally {
@@ -86,9 +167,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
                <h3 className="font-bold text-slate-200 uppercase tracking-widest text-xs">Инсайт дня</h3>
             </div>
             <p className="text-lg font-serif italic text-slate-100 leading-relaxed mb-4">
-              "Вода в ваших снах последнее время стала прозрачнее. Это знак того, что эмоции становятся более осознанными."
+              "{dailyInsight || 'Загрузка инсайтов...'}"
             </p>
-            <button 
+            <button
                onClick={() => onNavigate('analytics')}
                className="text-amber-400 hover:text-amber-300 text-sm font-medium flex items-center gap-1 transition-colors"
             >
@@ -119,13 +200,99 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
              </button>
          </TiltCard>
 
-         {/* Calendar Placeholder */}
-         <TiltCard className="md:col-span-1 glass-panel p-6 rounded-2xl border-t-4 border-t-emerald-500 bg-slate-900/60 flex flex-col items-center justify-center text-center">
-             <div className="w-12 h-12 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-400 mb-3">
-                <Calendar size={24} />
+         {/* Dream Calendar */}
+         <TiltCard className="md:col-span-1 glass-panel p-6 rounded-2xl border-t-4 border-t-emerald-500 bg-slate-900/60">
+             <div className="flex items-center gap-2 mb-4">
+                <Calendar className="text-emerald-400" size={20}/>
+                <h3 className="font-bold text-slate-200 uppercase tracking-widest text-xs">Календарь снов</h3>
              </div>
-             <h3 className="font-bold text-slate-200 mb-1">Календарь снов</h3>
-             <p className="text-slate-500 text-xs">Визуализация частоты ваших сновидений скоро появится.</p>
+
+             {entries.length === 0 ? (
+               <p className="text-slate-500 text-sm text-center py-6">
+                 Начните записывать сны, чтобы увидеть календарь активности.
+               </p>
+             ) : (
+               <div>
+                 <div className="grid grid-cols-7 gap-1 mb-2">
+                   {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
+                     <div key={day} className="text-[10px] text-slate-500 text-center font-medium">
+                       {day}
+                     </div>
+                   ))}
+                 </div>
+
+                 <div className="grid grid-cols-7 gap-1">
+                   {(() => {
+                     const today = new Date();
+                     const currentMonth = today.getMonth();
+                     const currentYear = today.getFullYear();
+
+                     // Get first day of month (0 = Sunday, 1 = Monday, etc.)
+                     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                     // Adjust for Monday start (0 = Monday, 6 = Sunday)
+                     const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+
+                     // Get days in current month
+                     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+                     // Create set of days with dreams
+                     const dreamDays = new Set(
+                       entries
+                         .filter(e => {
+                           const d = new Date(e.timestamp);
+                           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                         })
+                         .map(e => new Date(e.timestamp).getDate())
+                     );
+
+                     const cells = [];
+
+                     // Empty cells before first day
+                     for (let i = 0; i < adjustedFirstDay; i++) {
+                       cells.push(
+                         <div key={`empty-${i}`} className="aspect-square"></div>
+                       );
+                     }
+
+                     // Days of month
+                     for (let day = 1; day <= daysInMonth; day++) {
+                       const hasDream = dreamDays.has(day);
+                       const isToday = day === today.getDate();
+
+                       cells.push(
+                         <div
+                           key={day}
+                           className={`
+                             aspect-square rounded-md flex items-center justify-center text-[11px] font-medium
+                             transition-all
+                             ${hasDream
+                               ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                               : 'bg-slate-800/40 text-slate-600'
+                             }
+                             ${isToday ? 'ring-2 ring-amber-400/50' : ''}
+                           `}
+                         >
+                           {day}
+                         </div>
+                       );
+                     }
+
+                     return cells;
+                   })()}
+                 </div>
+
+                 <div className="mt-4 flex items-center justify-between text-[10px]">
+                   <div className="flex items-center gap-1">
+                     <div className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50"></div>
+                     <span className="text-slate-400">Записан сон</span>
+                   </div>
+                   <div className="flex items-center gap-1">
+                     <div className="w-3 h-3 rounded ring-2 ring-amber-400/50"></div>
+                     <span className="text-slate-400">Сегодня</span>
+                   </div>
+                 </div>
+               </div>
+             )}
          </TiltCard>
 
       </div>
