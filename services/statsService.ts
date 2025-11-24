@@ -26,6 +26,7 @@ export interface UserStats {
   methodUsage?: MethodUsageStats; // Track which methods were used and how many times
   emotionHistory?: EmotionRecord[]; // Track emotions over time
   symbolFrequency?: SymbolFrequency; // Track symbol occurrences
+  unlockedAchievements?: string[]; // Array of unlocked achievement IDs
 }
 
 /**
@@ -45,7 +46,8 @@ export const getUserStats = (): UserStats => {
     totalAnalyzedDreams: 0,
     methodUsage: {},
     emotionHistory: [],
-    symbolFrequency: {}
+    symbolFrequency: {},
+    unlockedAchievements: []
   };
 };
 
@@ -176,4 +178,49 @@ export const recordSymbols = (symbolNames: string[]): void => {
 export const getSymbolFrequency = (): SymbolFrequency => {
   const stats = getUserStats();
   return stats.symbolFrequency || {};
+};
+
+/**
+ * Unlock an achievement
+ * Returns true if achievement was newly unlocked, false if already unlocked
+ */
+export const unlockAchievement = (achievementId: string): boolean => {
+  try {
+    const stats = getUserStats();
+
+    // Initialize unlockedAchievements if it doesn't exist
+    if (!stats.unlockedAchievements) {
+      stats.unlockedAchievements = [];
+    }
+
+    // Check if already unlocked
+    if (stats.unlockedAchievements.includes(achievementId)) {
+      return false;
+    }
+
+    // Unlock the achievement
+    stats.unlockedAchievements.push(achievementId);
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    console.log(`🏆 Achievement unlocked: ${achievementId}`);
+    return true;
+  } catch (e) {
+    console.error('Failed to unlock achievement:', e);
+    return false;
+  }
+};
+
+/**
+ * Check if an achievement is unlocked
+ */
+export const isAchievementUnlocked = (achievementId: string): boolean => {
+  const stats = getUserStats();
+  return stats.unlockedAchievements?.includes(achievementId) || false;
+};
+
+/**
+ * Get all unlocked achievement IDs
+ */
+export const getUnlockedAchievements = (): string[] => {
+  const stats = getUserStats();
+  return stats.unlockedAchievements || [];
 };

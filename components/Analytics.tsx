@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
 import Tooltip from './Tooltip';
-import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles } from 'lucide-react';
-import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, getSymbolFrequency, EmotionRecord, SymbolFrequency } from '../services/statsService';
+import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles, Award, Lock } from 'lucide-react';
+import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, getSymbolFrequency, getUnlockedAchievements, unlockAchievement, EmotionRecord, SymbolFrequency } from '../services/statsService';
 import { getJournalEntries } from '../services/supabaseStorageService';
 import { JournalEntry, PsychMethod } from '../types';
 import { PSYCH_METHODS } from '../constants';
+import { ACHIEVEMENTS, Achievement } from '../constants/achievements';
 
 interface Recommendation {
   icon: any;
@@ -189,6 +190,7 @@ const Analytics: React.FC = () => {
     longestDream: null
   });
   const [symbolStats, setSymbolStats] = useState<SymbolStat[]>([]);
+  const [achievements, setAchievements] = useState<{ achievement: Achievement; unlocked: boolean }[]>([]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -331,11 +333,36 @@ const Analytics: React.FC = () => {
         const recs = generateRecommendations(entries, analyzed);
         setRecommendations(recs);
 
+        // Check and unlock achievements
+        const stats = {
+          totalAnalyzedDreams: analyzed,
+          methodUsage: allMethodUsage,
+          emotionHistory,
+          symbolFrequency
+        };
+
+        const unlockedIds = getUnlockedAchievements();
+        const achievementData = ACHIEVEMENTS.map(achievement => {
+          const isUnlocked = unlockedIds.includes(achievement.id);
+          const meetsCondition = achievement.condition(stats, entries);
+
+          // Auto-unlock if condition is met but not yet unlocked
+          if (meetsCondition && !isUnlocked) {
+            unlockAchievement(achievement.id);
+            return { achievement, unlocked: true };
+          }
+
+          return { achievement, unlocked: isUnlocked };
+        });
+
+        setAchievements(achievementData);
+
         console.log('📊 Analytics loaded:', {
           analyzed,
           entriesCount: entries.length,
           recommendations: recs.length,
-          methods: methodStatsData.length
+          methods: methodStatsData.length,
+          unlockedAchievements: achievementData.filter(a => a.unlocked).length
         });
 
       } catch (error) {
@@ -768,6 +795,88 @@ const Analytics: React.FC = () => {
                 ))}
               </div>
             </TiltCard>
+          </div>
+        </div>
+      )}
+
+      {/* Achievements Section */}
+      {!loading && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-xl font-serif font-bold text-white">Персональные достижения</h3>
+            <Tooltip content="Разблокируйте достижения, продолжая вести дневник снов и исследовать своё подсознание" position="right">
+              <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold cursor-help hover:bg-slate-600 transition-colors">
+                ?
+              </div>
+            </Tooltip>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-slate-400 text-sm">
+              Разблокировано: <span className="text-white font-bold">{achievements.filter(a => a.unlocked).length}</span> из <span className="text-white font-bold">{achievements.length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-500 transition-all duration-500"
+                  style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
+                />
+              </div>
+              <span className="text-amber-400 font-bold text-sm">
+                {Math.round((achievements.filter(a => a.unlocked).length / achievements.length) * 100)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {achievements.map(({ achievement, unlocked }, idx) => {
+              const Icon = achievement.icon;
+              return (
+                <Tooltip
+                  key={idx}
+                  content={achievement.description}
+                  position="top"
+                >
+                  <TiltCard
+                    className={`p-5 rounded-xl border transition-all duration-300 ${
+                      unlocked
+                        ? `${achievement.bgColor} ${achievement.borderColor} hover:border-opacity-60`
+                        : 'bg-slate-900/40 border-slate-800 opacity-60 grayscale'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center text-center gap-3">
+                      <div
+                        className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                          unlocked ? achievement.bgColor : 'bg-slate-800'
+                        } border-2 ${unlocked ? achievement.borderColor : 'border-slate-700'}`}
+                      >
+                        {unlocked ? (
+                          <Icon size={32} className={achievement.color} />
+                        ) : (
+                          <Lock size={32} className="text-slate-600" />
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className={`font-bold text-sm mb-1 ${unlocked ? 'text-white' : 'text-slate-500'}`}>
+                          {achievement.name}
+                        </h4>
+                        <p className={`text-xs ${unlocked ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {achievement.description}
+                        </p>
+                      </div>
+
+                      {unlocked && (
+                        <div className="mt-2 flex items-center gap-1">
+                          <Award size={14} className="text-amber-400" />
+                          <span className="text-xs text-amber-400 font-bold">Разблокировано</span>
+                        </div>
+                      )}
+                    </div>
+                  </TiltCard>
+                </Tooltip>
+              );
+            })}
           </div>
         </div>
       )}
