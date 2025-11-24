@@ -12,6 +12,8 @@ import TiltCard from './TiltCard';
 interface AnalysisResultProps {
   data: DreamData;
   onReset: () => void;
+  onSaveStatusChange?: (isSaved: boolean) => void;
+  onAnalysisComplete?: () => void;
 }
 
 const LOADING_MESSAGES = [
@@ -104,7 +106,7 @@ const SymbolAccordion: React.FC<{ item: DreamSymbol; index: number }> = ({ item,
   );
 };
 
-const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
+const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveStatusChange, onAnalysisComplete }) => {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
@@ -133,6 +135,11 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
 
         // Increment analyzed dreams counter (regardless of whether user saves it)
         incrementAnalyzedDreams();
+
+        // Notify parent that analysis is complete
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Произошла ошибка при анализе.");
       } finally {
@@ -172,6 +179,11 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
     saveJournalEntry(entry);
     setIsSaved(true);
     setShowExitWarning(false);
+
+    // Notify parent that save status changed
+    if (onSaveStatusChange) {
+      onSaveStatusChange(true);
+    }
   };
 
   const handleNewAnalysis = () => {

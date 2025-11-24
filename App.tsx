@@ -15,7 +15,7 @@ import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
-import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles, AlertCircle, Save } from 'lucide-react';
 import TiltCard from './components/TiltCard';
 import { getCurrentUser, onAuthStateChange } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
@@ -45,6 +45,9 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [selectedDream, setSelectedDream] = useState<JournalEntry | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [showExitWarning, setShowExitWarning] = useState(false);
 
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
@@ -120,6 +123,8 @@ function App() {
   const resetApp = () => {
     setDreamData(INITIAL_DATA);
     setStep(1);
+    setIsSaved(false);
+    setAnalysisComplete(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -178,6 +183,24 @@ function App() {
     navigateTo('journal');
   };
 
+  // Check if analysis is complete but not saved before navigating away
+  const handleNavigateWithCheck = (targetView: AppView) => {
+    // If we're on step 4 (analysis result), analysis is complete, but not saved
+    if (view === 'wizard' && step === 4 && analysisComplete && !isSaved) {
+      setShowExitWarning(true);
+    } else {
+      navigateTo(targetView);
+    }
+  };
+
+  const confirmExitWithoutSave = () => {
+    setShowExitWarning(false);
+    // Reset analysis state when leaving without saving
+    setIsSaved(false);
+    setAnalysisComplete(false);
+    navigateTo('dashboard');
+  };
+
   // --- RENDER WIZARD LAYOUT (Interpretation Process) ---
   const renderWizardLayout = () => (
     <div className="relative z-20 flex flex-col min-h-screen pb-20">
@@ -194,7 +217,7 @@ function App() {
             
             <nav className="flex items-center gap-4">
                <button
-                onClick={() => navigateTo('dashboard')}
+                onClick={() => handleNavigateWithCheck('dashboard')}
                 className="flex items-center gap-2 text-sm font-medium text-indigo-200 hover:text-white transition-colors bg-indigo-900/30 hover:bg-indigo-600 px-4 py-2 rounded-full border border-indigo-500/30 hover:border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
                >
                  <UserIcon size={16} />
@@ -220,7 +243,12 @@ function App() {
                   <MethodSelector selected={dreamData.method} onSelect={handleMethodSelect} />
                 )}
                 {step === 4 && (
-                  <AnalysisResult data={dreamData} onReset={resetApp} />
+                  <AnalysisResult
+                    data={dreamData}
+                    onReset={resetApp}
+                    onSaveStatusChange={setIsSaved}
+                    onAnalysisComplete={() => setAnalysisComplete(true)}
+                  />
                 )}
               </div>
 
@@ -362,6 +390,43 @@ function App() {
         renderWizardLayout()
       ) : (
         renderCabinetLayout()
+      )}
+
+      {/* --- EXIT WARNING MODAL --- */}
+      {showExitWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <TiltCard className="max-w-md w-full bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-8 shadow-2xl">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex-shrink-0 w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
+                <AlertCircle size={28} className="text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-serif font-bold text-white mb-2">Толкование не сохранено!</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Вы не сохранили толкование в журнал. Если вы продолжите, оно будет потеряно и не будет доступно в личном кабинете.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={confirmExitWithoutSave}
+                className="flex-1 text-red-400 border-red-500/30 hover:bg-red-900/20"
+              >
+                Выйти без сохранения
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowExitWarning(false)}
+              className="mt-4 w-full text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Отмена
+            </button>
+          </TiltCard>
+        </div>
       )}
 
     </div>
