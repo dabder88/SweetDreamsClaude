@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
 import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles } from 'lucide-react';
-import { getTotalAnalyzedDreams } from '../services/statsService';
+import { getTotalAnalyzedDreams, getMethodUsage } from '../services/statsService';
 import { getJournalEntries } from '../services/supabaseStorageService';
 import { JournalEntry, PsychMethod } from '../types';
 import { PSYCH_METHODS } from '../constants';
@@ -180,21 +180,18 @@ const Analytics: React.FC = () => {
           setDaysOfJournaling(days);
         }
 
-        // Calculate method statistics
-        const methodCounts = new Map<PsychMethod, number>();
-        entries.forEach(entry => {
-          const method = entry.dreamData.method;
-          methodCounts.set(method, (methodCounts.get(method) || 0) + 1);
-        });
+        // Calculate method statistics from ALL analyzed dreams (not just saved ones)
+        const allMethodUsage = getMethodUsage();
+        const totalMethodCount = Object.values(allMethodUsage).reduce((sum, count) => sum + count, 0);
 
-        const methodStatsData: MethodStat[] = Array.from(methodCounts.entries())
+        const methodStatsData: MethodStat[] = Object.entries(allMethodUsage)
           .map(([methodId, count]) => {
             const methodInfo = PSYCH_METHODS.find(m => m.id === methodId);
             return {
-              methodId,
+              methodId: methodId as PsychMethod,
               methodName: methodInfo?.name || methodId,
               count,
-              percentage: (count / entries.length) * 100,
+              percentage: totalMethodCount > 0 ? (count / totalMethodCount) * 100 : 0,
               color: methodInfo?.color || 'text-slate-300',
               icon: methodInfo?.icon || Activity
             };

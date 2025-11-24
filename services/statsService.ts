@@ -3,11 +3,18 @@
  * Tracks total analyzed dreams separately from saved journal entries
  */
 
+import { PsychMethod } from '../types';
+
 const STATS_KEY = 'psydream_stats_v1';
+
+export interface MethodUsageStats {
+  [key: string]: number; // methodId -> count
+}
 
 export interface UserStats {
   totalAnalyzedDreams: number; // Total number of dreams analyzed (saved or not)
   lastAnalysisTimestamp?: number;
+  methodUsage?: MethodUsageStats; // Track which methods were used and how many times
 }
 
 /**
@@ -24,7 +31,8 @@ export const getUserStats = (): UserStats => {
   }
 
   return {
-    totalAnalyzedDreams: 0
+    totalAnalyzedDreams: 0,
+    methodUsage: {}
   };
 };
 
@@ -57,4 +65,35 @@ export const resetStats = (): void => {
  */
 export const getTotalAnalyzedDreams = (): number => {
   return getUserStats().totalAnalyzedDreams;
+};
+
+/**
+ * Record usage of a specific psychological method
+ * Called whenever a dream is analyzed with a specific method
+ */
+export const recordMethodUsage = (method: PsychMethod): void => {
+  try {
+    const stats = getUserStats();
+
+    // Initialize methodUsage if it doesn't exist
+    if (!stats.methodUsage) {
+      stats.methodUsage = {};
+    }
+
+    // Increment count for this method
+    stats.methodUsage[method] = (stats.methodUsage[method] || 0) + 1;
+
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    console.log(`✅ Recorded method usage: ${method} (total: ${stats.methodUsage[method]})`);
+  } catch (e) {
+    console.error('Failed to record method usage:', e);
+  }
+};
+
+/**
+ * Get method usage statistics
+ */
+export const getMethodUsage = (): MethodUsageStats => {
+  const stats = getUserStats();
+  return stats.methodUsage || {};
 };
