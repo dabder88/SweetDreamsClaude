@@ -14,6 +14,8 @@ interface AnalysisResultProps {
   onReset: () => void;
   onSaveStatusChange?: (isSaved: boolean) => void;
   onAnalysisComplete?: () => void;
+  onAnalysisResultChange?: (result: any) => void;
+  onImageUrlChange?: (url: string | null) => void;
 }
 
 const LOADING_MESSAGES = [
@@ -106,7 +108,7 @@ const SymbolAccordion: React.FC<{ item: DreamSymbol; index: number }> = ({ item,
   );
 };
 
-const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveStatusChange, onAnalysisComplete }) => {
+const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveStatusChange, onAnalysisComplete, onAnalysisResultChange, onImageUrlChange }) => {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
@@ -140,6 +142,11 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
         if (onAnalysisComplete) {
           onAnalysisComplete();
         }
+
+        // Pass analysis result to parent
+        if (onAnalysisResultChange) {
+          onAnalysisResultChange(analysisData);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Произошла ошибка при анализе.");
       } finally {
@@ -156,6 +163,11 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
     try {
       const url = await visualizeDream(data.description);
       setImageUrl(url);
+
+      // Pass image URL to parent
+      if (onImageUrlChange) {
+        onImageUrlChange(url);
+      }
     } catch (err) {
       console.error(err);
       alert("Не удалось сгенерировать изображение. Попробуйте снова.");

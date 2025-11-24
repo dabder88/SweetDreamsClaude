@@ -19,7 +19,7 @@ import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles, A
 import TiltCard from './components/TiltCard';
 import { getCurrentUser, onAuthStateChange } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
-import { migrateLocalEntriesToSupabase } from './services/supabaseStorageService';
+import { migrateLocalEntriesToSupabase, saveJournalEntry } from './services/supabaseStorageService';
 
 const INITIAL_DATA: DreamData = {
   description: '',
@@ -48,6 +48,8 @@ function App() {
   const [isSaved, setIsSaved] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
+  const [currentAnalysisResult, setCurrentAnalysisResult] = useState<any>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
@@ -198,7 +200,30 @@ function App() {
     // Reset analysis state when leaving without saving
     setIsSaved(false);
     setAnalysisComplete(false);
+    setCurrentAnalysisResult(null);
+    setCurrentImageUrl(null);
     navigateTo('dashboard');
+  };
+
+  const handleSaveAndExit = async () => {
+    // Save the current analysis to journal
+    if (currentAnalysisResult) {
+      const entry: JournalEntry = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        dreamData: dreamData,
+        analysis: currentAnalysisResult,
+        imageUrl: currentImageUrl,
+        notes: ''
+      };
+
+      await saveJournalEntry(entry);
+      setIsSaved(true);
+      setShowExitWarning(false);
+      setCurrentAnalysisResult(null);
+      setCurrentImageUrl(null);
+      navigateTo('dashboard');
+    }
   };
 
   // --- RENDER WIZARD LAYOUT (Interpretation Process) ---
@@ -248,6 +273,8 @@ function App() {
                     onReset={resetApp}
                     onSaveStatusChange={setIsSaved}
                     onAnalysisComplete={() => setAnalysisComplete(true)}
+                    onAnalysisResultChange={setCurrentAnalysisResult}
+                    onImageUrlChange={setCurrentImageUrl}
                   />
                 )}
               </div>
@@ -410,6 +437,14 @@ function App() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
+                variant="primary"
+                onClick={handleSaveAndExit}
+                icon={<Save size={20}/>}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400"
+              >
+                Сохранить в журнал
+              </Button>
+              <Button
                 variant="outline"
                 onClick={confirmExitWithoutSave}
                 className="flex-1 text-red-400 border-red-500/30 hover:bg-red-900/20"
@@ -417,14 +452,6 @@ function App() {
                 Выйти без сохранения
               </Button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowExitWarning(false)}
-              className="mt-4 w-full text-sm text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Отмена
-            </button>
           </TiltCard>
         </div>
       )}
