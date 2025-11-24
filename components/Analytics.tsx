@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
+import Tooltip from './Tooltip';
 import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles } from 'lucide-react';
 import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, EmotionRecord } from '../services/statsService';
 import { getJournalEntries } from '../services/supabaseStorageService';
@@ -335,61 +336,69 @@ const Analytics: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60">
-           <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
-             <Activity size={14} className="text-indigo-400"/> Проанализировано
-           </div>
-           {loading ? (
-             <div className="text-2xl font-serif text-slate-600">...</div>
-           ) : (
-             <>
-               <div className="text-3xl font-serif text-white">{totalAnalyzed}</div>
-               <div className="text-xs text-indigo-400 mt-1">всего снов</div>
-             </>
-           )}
-        </TiltCard>
+        <Tooltip content="Общее количество снов, которые вы проанализировали с помощью ИИ, включая несохранённые" position="bottom">
+          <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60 cursor-help">
+             <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
+               <Activity size={14} className="text-indigo-400"/> Проанализировано
+             </div>
+             {loading ? (
+               <div className="text-2xl font-serif text-slate-600">...</div>
+             ) : (
+               <>
+                 <div className="text-3xl font-serif text-white">{totalAnalyzed}</div>
+                 <div className="text-xs text-indigo-400 mt-1">всего снов</div>
+               </>
+             )}
+          </TiltCard>
+        </Tooltip>
 
-        <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60">
-           <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
-             <BookOpen size={14} className="text-emerald-400"/> Сохранено
-           </div>
-           {loading ? (
-             <div className="text-2xl font-serif text-slate-600">...</div>
-           ) : (
-             <>
-               <div className="text-3xl font-serif text-white">{savedCount}</div>
-               <div className="text-xs text-emerald-400 mt-1">в журнале</div>
-             </>
-           )}
-        </TiltCard>
+        <Tooltip content="Количество снов, сохранённых в вашем журнале для долгосрочного отслеживания" position="bottom">
+          <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60 cursor-help">
+             <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
+               <BookOpen size={14} className="text-emerald-400"/> Сохранено
+             </div>
+             {loading ? (
+               <div className="text-2xl font-serif text-slate-600">...</div>
+             ) : (
+               <>
+                 <div className="text-3xl font-serif text-white">{savedCount}</div>
+                 <div className="text-xs text-emerald-400 mt-1">в журнале</div>
+               </>
+             )}
+          </TiltCard>
+        </Tooltip>
 
-        <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60">
-           <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
-             <Image size={14} className="text-purple-400"/> Визуализаций
-           </div>
-           {loading ? (
-             <div className="text-2xl font-serif text-slate-600">...</div>
-           ) : (
-             <>
-               <div className="text-3xl font-serif text-white">{visualizationsCount}</div>
-               <div className="text-xs text-purple-400 mt-1">создано</div>
-             </>
-           )}
-        </TiltCard>
+        <Tooltip content="Количество AI-визуализаций, созданных для ваших снов" position="bottom">
+          <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60 cursor-help">
+             <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
+               <Image size={14} className="text-purple-400"/> Визуализаций
+             </div>
+             {loading ? (
+               <div className="text-2xl font-serif text-slate-600">...</div>
+             ) : (
+               <>
+                 <div className="text-3xl font-serif text-white">{visualizationsCount}</div>
+                 <div className="text-xs text-purple-400 mt-1">создано</div>
+               </>
+             )}
+          </TiltCard>
+        </Tooltip>
 
-        <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60">
-           <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
-             <Calendar size={14} className="text-amber-400"/> Дней ведения
-           </div>
-           {loading ? (
-             <div className="text-2xl font-serif text-slate-600">...</div>
-           ) : (
-             <>
-               <div className="text-3xl font-serif text-white">{daysOfJournaling}</div>
-               <div className="text-xs text-amber-400 mt-1">дневник</div>
-             </>
-           )}
-        </TiltCard>
+        <Tooltip content="Сколько дней прошло с вашей первой записи до последней в журнале" position="bottom">
+          <TiltCard className="glass-panel p-4 rounded-xl bg-slate-900/60 cursor-help">
+             <div className="text-slate-500 text-xs uppercase font-bold mb-2 flex items-center gap-2">
+               <Calendar size={14} className="text-amber-400"/> Дней ведения
+             </div>
+             {loading ? (
+               <div className="text-2xl font-serif text-slate-600">...</div>
+             ) : (
+               <>
+                 <div className="text-3xl font-serif text-white">{daysOfJournaling}</div>
+                 <div className="text-xs text-amber-400 mt-1">дневник</div>
+               </>
+             )}
+          </TiltCard>
+        </Tooltip>
       </div>
 
       {/* Recommendations Section */}
@@ -426,10 +435,17 @@ const Analytics: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* Emotional Map */}
         <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
-           <h3 className="text-lg font-bold text-slate-200 mb-6">Эмоциональная карта</h3>
+           <div className="flex items-center gap-2 mb-6">
+             <h3 className="text-lg font-bold text-slate-200">Эмоциональная карта</h3>
+             <Tooltip content="Топ-5 эмоций из всех ваших анализов. Показывает эмоциональные паттерны подсознания" position="right">
+               <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold cursor-help hover:bg-slate-600 transition-colors">
+                 ?
+               </div>
+             </Tooltip>
+           </div>
 
            {loading || emotionStats.length === 0 ? (
              <div className="flex items-center justify-center h-48 text-slate-500">
@@ -473,7 +489,14 @@ const Analytics: React.FC = () => {
 
         {/* Methods Analysis */}
         <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
-           <h3 className="text-lg font-bold text-slate-200 mb-6">Анализ по методам</h3>
+           <div className="flex items-center gap-2 mb-6">
+             <h3 className="text-lg font-bold text-slate-200">Анализ по методам</h3>
+             <Tooltip content="Статистика использования психологических методов. Помогает понять, какие подходы вы предпочитаете" position="right">
+               <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold cursor-help hover:bg-slate-600 transition-colors">
+                 ?
+               </div>
+             </Tooltip>
+           </div>
 
            {loading || methodStats.length === 0 ? (
              <div className="flex items-center justify-center h-48 text-slate-500">
@@ -560,66 +583,74 @@ const Analytics: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Recurring Dreams */}
-            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center">
-                  <Activity size={20} className="text-purple-400" />
+            <Tooltip content="Процент снов, которые повторяются. Высокий процент может указывать на важные жизненные темы" position="top">
+              <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50 cursor-help">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <Activity size={20} className="text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">Повторяющиеся</div>
+                    <div className="text-2xl font-bold text-white">{insights.recurringPercentage.toFixed(0)}%</div>
+                    <div className="text-xs text-slate-400 mt-1">{insights.recurringCount} {insights.recurringCount === 1 ? 'сон' : 'снов'}</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Повторяющиеся</div>
-                  <div className="text-2xl font-bold text-white">{insights.recurringPercentage.toFixed(0)}%</div>
-                  <div className="text-xs text-slate-400 mt-1">{insights.recurringCount} {insights.recurringCount === 1 ? 'сон' : 'снов'}</div>
-                </div>
-              </div>
-            </TiltCard>
+              </TiltCard>
+            </Tooltip>
 
             {/* Best Time to Record */}
-            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Calendar size={20} className="text-blue-400" />
+            <Tooltip content="Время суток, когда вы чаще всего записываете сны. Помогает найти оптимальный режим" position="top">
+              <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50 cursor-help">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <Calendar size={20} className="text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">Лучшее время</div>
+                    <div className="text-sm font-bold text-white leading-tight">{insights.bestTimeToRecord}</div>
+                    <div className="text-xs text-slate-400 mt-1">для записи снов</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Лучшее время</div>
-                  <div className="text-sm font-bold text-white leading-tight">{insights.bestTimeToRecord}</div>
-                  <div className="text-xs text-slate-400 mt-1">для записи снов</div>
-                </div>
-              </div>
-            </TiltCard>
+              </TiltCard>
+            </Tooltip>
 
             {/* Average Description Length */}
-            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                  <BookOpen size={20} className="text-emerald-400" />
+            <Tooltip content="Средняя длина описания ваших снов. Более детальные описания ведут к более глубокому анализу" position="top">
+              <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50 cursor-help">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                    <BookOpen size={20} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">Средняя длина</div>
+                    <div className="text-2xl font-bold text-white">{insights.avgDescriptionLength}</div>
+                    <div className="text-xs text-slate-400 mt-1">символов</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Средняя длина</div>
-                  <div className="text-2xl font-bold text-white">{insights.avgDescriptionLength}</div>
-                  <div className="text-xs text-slate-400 mt-1">символов</div>
-                </div>
-              </div>
-            </TiltCard>
+              </TiltCard>
+            </Tooltip>
 
             {/* Longest Dream */}
-            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-amber-900/30 rounded-lg flex items-center justify-center">
-                  <Target size={20} className="text-amber-400" />
+            <Tooltip content="Ваш самый подробный сон. Обычно длинные описания содержат богатый символический материал" position="top">
+              <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50 cursor-help">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-amber-900/30 rounded-lg flex items-center justify-center">
+                    <Target size={20} className="text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500 uppercase font-bold mb-1">Самый длинный</div>
+                    {insights.longestDream ? (
+                      <>
+                        <div className="text-2xl font-bold text-white">{insights.longestDream.length}</div>
+                        <div className="text-xs text-slate-400 mt-1">{insights.longestDream.date}</div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-slate-500">Нет данных</div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Самый длинный</div>
-                  {insights.longestDream ? (
-                    <>
-                      <div className="text-2xl font-bold text-white">{insights.longestDream.length}</div>
-                      <div className="text-xs text-slate-400 mt-1">{insights.longestDream.date}</div>
-                    </>
-                  ) : (
-                    <div className="text-sm text-slate-500">Нет данных</div>
-                  )}
-                </div>
-              </div>
-            </TiltCard>
+              </TiltCard>
+            </Tooltip>
           </div>
         </div>
       )}
