@@ -146,7 +146,7 @@ function App() {
   };
 
   const handleAuthSuccess = async () => {
-    // After successful auth, update user state and navigate to dashboard
+    // After successful auth, update user state and navigate to wizard (for dream interpretation)
     if (isSupabaseConfigured()) {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -160,8 +160,8 @@ function App() {
       }
     }
 
-    // Now navigate to dashboard - user state is updated
-    setView('dashboard');
+    // Navigate to wizard to start dream interpretation
+    setView('wizard');
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -345,8 +345,18 @@ function App() {
         <Auth onAuthSuccess={handleAuthSuccess} />
       ) : view === 'landing' ? (
         <LandingPage
-          onStart={() => navigateTo('wizard')}
+          onStart={() => {
+            // Check if user is authenticated when Supabase is configured
+            if (isSupabaseConfigured() && !user) {
+              // Redirect to auth page if not authenticated
+              navigateTo('auth');
+            } else {
+              // Proceed to wizard if authenticated or Supabase not configured
+              navigateTo('wizard');
+            }
+          }}
           onGoToCabinet={() => navigateTo('dashboard')}
+          user={user}
         />
       ) : view === 'wizard' ? (
         renderWizardLayout()

@@ -2,14 +2,15 @@ import React from 'react';
 import { ArrowRight, User, Sparkles, Moon } from 'lucide-react';
 import Button from './Button';
 import TiltCard from './TiltCard';
-import { AppView } from '../types';
+import { AppView, User as UserType } from '../types';
 
 interface LandingPageProps {
   onStart: () => void;
   onGoToCabinet: () => void;
+  user: UserType | null;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoToCabinet }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoToCabinet, user }) => {
   return (
     <div className="relative z-20 flex flex-col min-h-screen">
        {/* Transparent Header */}
