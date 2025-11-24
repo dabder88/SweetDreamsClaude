@@ -54,4 +54,4 @@ export interface JournalEntry {
   notes?: string;
 }
 
-export type AppView = 'wizard' | 'landing' | 'dashboard' | 'journal' | 'analytics' | 'archetypes' | 'settings' | 'auth';
+export type AppView = 'wizard' | 'landing' | 'dashboard' | 'journal' | 'dreamView' | 'analytics' | 'archetypes' | 'settings' | 'auth';

@@ -7,7 +7,10 @@
       "Bash(npm run dev:*)",
       "Bash(taskkill:*)",
       "Bash(nul)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(tasklist:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

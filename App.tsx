@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { DreamData, PsychMethod, AppView, User } from './types';
+import { DreamData, PsychMethod, AppView, User, JournalEntry } from './types';
 import StepIndicator from './components/StepIndicator';
 import DreamForm from './components/DreamForm';
 import ContextForm from './components/ContextForm';
 import MethodSelector from './components/MethodSelector';
 import AnalysisResult from './components/AnalysisResult';
 import DreamJournal from './components/DreamJournal';
+import DreamView from './components/DreamView';
 import Button from './components/Button';
 import Starfield from './components/Starfield';
 import Sidebar from './components/Sidebar';
@@ -43,6 +44,7 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [selectedDream, setSelectedDream] = useState<JournalEntry | null>(null);
 
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
@@ -129,7 +131,7 @@ function App() {
 
   const navigateTo = (newView: AppView) => {
     // Protect private views - require authentication if Supabase is configured
-    const privateViews: AppView[] = ['dashboard', 'journal', 'analytics', 'settings', 'archetypes'];
+    const privateViews: AppView[] = ['dashboard', 'journal', 'dreamView', 'analytics', 'settings', 'archetypes'];
 
     if (isSupabaseConfigured() && privateViews.includes(newView) && !user) {
       setView('auth');
@@ -162,6 +164,18 @@ function App() {
     setView('dashboard');
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleViewDream = (entry: JournalEntry) => {
+    setSelectedDream(entry);
+    setView('dreamView');
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToJournal = () => {
+    setSelectedDream(null);
+    navigateTo('journal');
   };
 
   // --- RENDER WIZARD LAYOUT (Interpretation Process) ---
@@ -278,7 +292,8 @@ function App() {
         {/* View Router */}
         <div className="max-w-6xl mx-auto">
           {view === 'dashboard' && <Dashboard onNavigate={navigateTo} user={user} />}
-          {view === 'journal' && <DreamJournal />}
+          {view === 'journal' && <DreamJournal onViewDream={handleViewDream} />}
+          {view === 'dreamView' && selectedDream && <DreamView entry={selectedDream} onBack={handleBackToJournal} />}
           {view === 'analytics' && <Analytics />}
           {view === 'settings' && <Settings />}
           
