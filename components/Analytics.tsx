@@ -31,6 +31,17 @@ interface EmotionStat {
   color: string;
 }
 
+interface InsightStats {
+  recurringPercentage: number;
+  recurringCount: number;
+  bestTimeToRecord: string;
+  avgDescriptionLength: number;
+  longestDream: {
+    length: number;
+    date: string;
+  } | null;
+}
+
 /**
  * Генерирует умные рекомендации на основе данных пользователя
  */
@@ -163,6 +174,13 @@ const Analytics: React.FC = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [methodStats, setMethodStats] = useState<MethodStat[]>([]);
   const [emotionStats, setEmotionStats] = useState<EmotionStat[]>([]);
+  const [insights, setInsights] = useState<InsightStats>({
+    recurringPercentage: 0,
+    recurringCount: 0,
+    bestTimeToRecord: 'N/A',
+    avgDescriptionLength: 0,
+    longestDream: null
+  });
 
   useEffect(() => {
     const loadStats = async () => {
@@ -240,6 +258,52 @@ const Analytics: React.FC = () => {
           .sort((a, b) => b.count - a.count);
 
         setEmotionStats(emotionStatsData);
+
+        // Calculate insights and patterns
+        if (entries.length > 0) {
+          // 1. Recurring dreams percentage
+          const recurringDreams = entries.filter(e => e.dreamData.context.recurring);
+          const recurringCount = recurringDreams.length;
+          const recurringPercentage = (recurringCount / entries.length) * 100;
+
+          // 2. Best time to record (time of day analysis)
+          const timeSlots = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+          entries.forEach(entry => {
+            const hour = new Date(entry.timestamp).getHours();
+            if (hour >= 6 && hour < 12) timeSlots.morning++;
+            else if (hour >= 12 && hour < 18) timeSlots.afternoon++;
+            else if (hour >= 18 && hour < 22) timeSlots.evening++;
+            else timeSlots.night++;
+          });
+
+          const maxSlot = Object.entries(timeSlots).reduce((a, b) => a[1] > b[1] ? a : b);
+          const timeLabels: { [key: string]: string } = {
+            morning: 'Утро (6:00-12:00)',
+            afternoon: 'День (12:00-18:00)',
+            evening: 'Вечер (18:00-22:00)',
+            night: 'Ночь (22:00-6:00)'
+          };
+          const bestTime = timeLabels[maxSlot[0]];
+
+          // 3. Average description length
+          const totalLength = entries.reduce((sum, e) => sum + e.dreamData.description.length, 0);
+          const avgLength = Math.round(totalLength / entries.length);
+
+          // 4. Longest dream
+          const longest = entries.reduce((max, e) =>
+            e.dreamData.description.length > max.length
+              ? { length: e.dreamData.description.length, date: new Date(e.timestamp).toLocaleDateString('ru-RU') }
+              : max
+          , { length: 0, date: '' });
+
+          setInsights({
+            recurringPercentage,
+            recurringCount,
+            bestTimeToRecord: bestTime,
+            avgDescriptionLength: avgLength,
+            longestDream: longest.length > 0 ? longest : null
+          });
+        }
 
         // Generate recommendations
         const recs = generateRecommendations(entries, analyzed);
@@ -485,6 +549,80 @@ const Analytics: React.FC = () => {
            )}
         </TiltCard>
       </div>
+
+      {/* Insights and Patterns Section */}
+      {!loading && savedCount > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-serif font-bold text-white mb-4 flex items-center gap-2">
+            <Lightbulb size={20} className="text-indigo-400" />
+            Инсайты и паттерны
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Recurring Dreams */}
+            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center">
+                  <Activity size={20} className="text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Повторяющиеся</div>
+                  <div className="text-2xl font-bold text-white">{insights.recurringPercentage.toFixed(0)}%</div>
+                  <div className="text-xs text-slate-400 mt-1">{insights.recurringCount} {insights.recurringCount === 1 ? 'сон' : 'снов'}</div>
+                </div>
+              </div>
+            </TiltCard>
+
+            {/* Best Time to Record */}
+            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <Calendar size={20} className="text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Лучшее время</div>
+                  <div className="text-sm font-bold text-white leading-tight">{insights.bestTimeToRecord}</div>
+                  <div className="text-xs text-slate-400 mt-1">для записи снов</div>
+                </div>
+              </div>
+            </TiltCard>
+
+            {/* Average Description Length */}
+            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                  <BookOpen size={20} className="text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Средняя длина</div>
+                  <div className="text-2xl font-bold text-white">{insights.avgDescriptionLength}</div>
+                  <div className="text-xs text-slate-400 mt-1">символов</div>
+                </div>
+              </div>
+            </TiltCard>
+
+            {/* Longest Dream */}
+            <TiltCard className="glass-panel p-5 rounded-xl bg-slate-900/60 border border-slate-700/50">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-amber-900/30 rounded-lg flex items-center justify-center">
+                  <Target size={20} className="text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-slate-500 uppercase font-bold mb-1">Самый длинный</div>
+                  {insights.longestDream ? (
+                    <>
+                      <div className="text-2xl font-bold text-white">{insights.longestDream.length}</div>
+                      <div className="text-xs text-slate-400 mt-1">{insights.longestDream.date}</div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-slate-500">Нет данных</div>
+                  )}
+                </div>
+              </div>
+            </TiltCard>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
