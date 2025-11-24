@@ -143,9 +143,25 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAuthSuccess = () => {
-    // After successful auth, navigate to dashboard
-    navigateTo('dashboard');
+  const handleAuthSuccess = async () => {
+    // After successful auth, update user state and navigate to dashboard
+    if (isSupabaseConfigured()) {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+
+      // Migrate local entries to Supabase if user is authenticated
+      if (currentUser) {
+        const migratedCount = await migrateLocalEntriesToSupabase();
+        if (migratedCount > 0) {
+          console.log(`Migrated ${migratedCount} entries to Supabase`);
+        }
+      }
+    }
+
+    // Now navigate to dashboard - user state is updated
+    setView('dashboard');
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // --- RENDER WIZARD LAYOUT (Interpretation Process) ---

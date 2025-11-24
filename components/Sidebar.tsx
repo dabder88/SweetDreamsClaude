@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User, Home } from 'lucide-react';
 import { AppView, User as UserType } from '../types';
 import { signOut } from '../services/authService';
 import { isSupabaseConfigured } from '../services/supabaseClient';
@@ -21,6 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) =>
   };
   
   const menuItems = [
+    { id: 'landing', label: 'Главная', icon: Home },
     { id: 'dashboard', label: 'Обзор', icon: LayoutDashboard },
     { id: 'journal', label: 'Журнал снов', icon: BookOpen },
     { id: 'analytics', label: 'Аналитика', icon: BarChart2 },
