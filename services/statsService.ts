@@ -11,10 +11,16 @@ export interface MethodUsageStats {
   [key: string]: number; // methodId -> count
 }
 
+export interface EmotionRecord {
+  emotion: string;
+  timestamp: number;
+}
+
 export interface UserStats {
   totalAnalyzedDreams: number; // Total number of dreams analyzed (saved or not)
   lastAnalysisTimestamp?: number;
   methodUsage?: MethodUsageStats; // Track which methods were used and how many times
+  emotionHistory?: EmotionRecord[]; // Track emotions over time
 }
 
 /**
@@ -32,7 +38,8 @@ export const getUserStats = (): UserStats => {
 
   return {
     totalAnalyzedDreams: 0,
-    methodUsage: {}
+    methodUsage: {},
+    emotionHistory: []
   };
 };
 
@@ -96,4 +103,38 @@ export const recordMethodUsage = (method: PsychMethod): void => {
 export const getMethodUsage = (): MethodUsageStats => {
   const stats = getUserStats();
   return stats.methodUsage || {};
+};
+
+/**
+ * Record an emotion for a dream analysis
+ * Called whenever a dream is analyzed with emotional context
+ */
+export const recordEmotion = (emotion: string): void => {
+  try {
+    const stats = getUserStats();
+
+    // Initialize emotionHistory if it doesn't exist
+    if (!stats.emotionHistory) {
+      stats.emotionHistory = [];
+    }
+
+    // Add emotion record with timestamp
+    stats.emotionHistory.push({
+      emotion,
+      timestamp: Date.now()
+    });
+
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    console.log(`✅ Recorded emotion: ${emotion} (total emotions: ${stats.emotionHistory.length})`);
+  } catch (e) {
+    console.error('Failed to record emotion:', e);
+  }
+};
+
+/**
+ * Get emotion history
+ */
+export const getEmotionHistory = (): EmotionRecord[] => {
+  const stats = getUserStats();
+  return stats.emotionHistory || [];
 };

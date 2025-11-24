@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
 import { Activity, BookOpen, Image, Calendar, Lightbulb, TrendingUp, Target, Sparkles } from 'lucide-react';
-import { getTotalAnalyzedDreams, getMethodUsage } from '../services/statsService';
+import { getTotalAnalyzedDreams, getMethodUsage, getEmotionHistory, EmotionRecord } from '../services/statsService';
 import { getJournalEntries } from '../services/supabaseStorageService';
 import { JournalEntry, PsychMethod } from '../types';
 import { PSYCH_METHODS } from '../constants';
@@ -22,6 +22,13 @@ interface MethodStat {
   percentage: number;
   color: string;
   icon: any;
+}
+
+interface EmotionStat {
+  emotion: string;
+  count: number;
+  percentage: number;
+  color: string;
 }
 
 /**
@@ -155,6 +162,7 @@ const Analytics: React.FC = () => {
   const [daysOfJournaling, setDaysOfJournaling] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [methodStats, setMethodStats] = useState<MethodStat[]>([]);
+  const [emotionStats, setEmotionStats] = useState<EmotionStat[]>([]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -199,6 +207,39 @@ const Analytics: React.FC = () => {
           .sort((a, b) => b.count - a.count); // Сортировка по убыванию
 
         setMethodStats(methodStatsData);
+
+        // Calculate emotion statistics from ALL analyzed dreams
+        const emotionHistory = getEmotionHistory();
+        const emotionCounts = new Map<string, number>();
+
+        emotionHistory.forEach(record => {
+          const emotion = record.emotion;
+          emotionCounts.set(emotion, (emotionCounts.get(emotion) || 0) + 1);
+        });
+
+        const totalEmotions = emotionHistory.length;
+
+        // Color mapping for emotions
+        const emotionColors: { [key: string]: string } = {
+          'Тревога/Страх': 'text-red-400',
+          'Радость/Экстаз': 'text-yellow-400',
+          'Замешательство': 'text-purple-400',
+          'Грусть/Горе': 'text-blue-400',
+          'Гнев': 'text-orange-400',
+          'Покой/Облегчение': 'text-green-400',
+          'Стыд/Вина': 'text-pink-400'
+        };
+
+        const emotionStatsData: EmotionStat[] = Array.from(emotionCounts.entries())
+          .map(([emotion, count]) => ({
+            emotion,
+            count,
+            percentage: totalEmotions > 0 ? (count / totalEmotions) * 100 : 0,
+            color: emotionColors[emotion] || 'text-slate-400'
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        setEmotionStats(emotionStatsData);
 
         // Generate recommendations
         const recs = generateRecommendations(entries, analyzed);
@@ -322,31 +363,48 @@ const Analytics: React.FC = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Emotional Pulse Chart (Mock SVG) */}
+        {/* Emotional Map */}
         <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
-           <h3 className="text-lg font-bold text-slate-200 mb-6">Эмоциональный пульс</h3>
-           <div className="h-48 w-full relative flex items-end justify-between gap-2 px-2">
-              {/* Grid lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                 <div className="border-t border-slate-500 w-full"></div>
-                 <div className="border-t border-slate-500 w-full"></div>
-                 <div className="border-t border-slate-500 w-full"></div>
-              </div>
-              
-              {/* Bars */}
-              {[30, 50, 45, 70, 60, 80, 55, 40, 65, 90].map((h, i) => (
-                <div key={i} className="w-full bg-indigo-500/20 rounded-t-sm relative group">
-                   <div 
-                    style={{ height: `${h}%` }} 
-                    className="absolute bottom-0 w-full bg-gradient-to-t from-indigo-600 to-purple-500 rounded-t-md group-hover:opacity-100 transition-all"
-                   ></div>
-                   {/* Tooltip mock */}
-                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      День {i+1}
+           <h3 className="text-lg font-bold text-slate-200 mb-6">Эмоциональная карта</h3>
+
+           {loading || emotionStats.length === 0 ? (
+             <div className="flex items-center justify-center h-48 text-slate-500">
+               {loading ? '...' : 'Нет данных об эмоциях'}
+             </div>
+           ) : (
+             <div className="space-y-4">
+               {/* Top 5 Emotions */}
+               <div className="space-y-3">
+                 {emotionStats.slice(0, 5).map((stat, idx) => (
+                   <div key={idx} className="space-y-2">
+                     <div className="flex items-center justify-between text-sm">
+                       <span className={`font-medium ${stat.color}`}>{stat.emotion}</span>
+                       <div className="flex items-center gap-2">
+                         <span className="text-slate-400">{stat.count} {stat.count === 1 ? 'раз' : 'раз'}</span>
+                         <span className="text-white font-bold">{stat.percentage.toFixed(0)}%</span>
+                       </div>
+                     </div>
+                     {/* Progress bar */}
+                     <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                       <div
+                         className={`h-full rounded-full transition-all duration-500 ${
+                           stat.emotion === 'Тревога/Страх' ? 'bg-red-500' :
+                           stat.emotion === 'Радость/Экстаз' ? 'bg-yellow-500' :
+                           stat.emotion === 'Замешательство' ? 'bg-purple-500' :
+                           stat.emotion === 'Грусть/Горе' ? 'bg-blue-500' :
+                           stat.emotion === 'Гнев' ? 'bg-orange-500' :
+                           stat.emotion === 'Покой/Облегчение' ? 'bg-green-500' :
+                           stat.emotion === 'Стыд/Вина' ? 'bg-pink-500' :
+                           'bg-slate-500'
+                         }`}
+                         style={{ width: `${stat.percentage}%` }}
+                       ></div>
+                     </div>
                    </div>
-                </div>
-              ))}
-           </div>
+                 ))}
+               </div>
+             </div>
+           )}
         </TiltCard>
 
         {/* Methods Analysis */}
