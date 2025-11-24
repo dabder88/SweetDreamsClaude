@@ -18,10 +18,22 @@ interface Recommendation {
 /**
  * Генерирует умные рекомендации на основе данных пользователя
  */
-const generateRecommendations = (entries: JournalEntry[]): Recommendation[] => {
+const generateRecommendations = (entries: JournalEntry[], totalAnalyzed: number): Recommendation[] => {
   const recommendations: Recommendation[] = [];
 
-  if (entries.length === 0) {
+  // Если нет сохранённых записей, но есть проанализированные сны
+  if (entries.length === 0 && totalAnalyzed > 0) {
+    return [{
+      icon: BookOpen,
+      text: `Вы проанализировали ${totalAnalyzed} ${totalAnalyzed === 1 ? 'сон' : 'снов'}, но не сохранили ${totalAnalyzed === 1 ? 'его' : 'их'} в журнал. Сохраняйте толкования, чтобы отслеживать паттерны!`,
+      type: 'progress',
+      color: 'text-amber-300',
+      bgColor: 'bg-amber-900/20'
+    }];
+  }
+
+  // Если вообще ничего нет
+  if (entries.length === 0 && totalAnalyzed === 0) {
     return [{
       icon: Sparkles,
       text: 'Начните свой путь самопознания - запишите первый сон!',
@@ -92,7 +104,19 @@ const generateRecommendations = (entries: JournalEntry[]): Recommendation[] => {
     });
   }
 
-  // 4. Поощрение прогресса
+  // 4. Проверка на несохранённые анализы
+  const unsavedCount = totalAnalyzed - entries.length;
+  if (unsavedCount >= 3) {
+    recommendations.push({
+      icon: BookOpen,
+      text: `У вас ${unsavedCount} несохранённых ${unsavedCount >= 5 ? 'анализов' : 'анализа'}! Сохраняйте толкования в журнал для отслеживания паттернов`,
+      type: 'progress',
+      color: 'text-amber-300',
+      bgColor: 'bg-amber-900/20'
+    });
+  }
+
+  // 5. Поощрение прогресса
   if (entries.length >= 5 && entries.length < 10) {
     recommendations.push({
       icon: Lightbulb,
@@ -147,8 +171,14 @@ const Analytics: React.FC = () => {
         }
 
         // Generate recommendations
-        const recs = generateRecommendations(entries);
+        const recs = generateRecommendations(entries, analyzed);
         setRecommendations(recs);
+
+        console.log('📊 Analytics loaded:', {
+          analyzed,
+          entriesCount: entries.length,
+          recommendations: recs.length
+        });
 
       } catch (error) {
         console.error('Error loading analytics:', error);
