@@ -15,6 +15,15 @@ interface Recommendation {
   bgColor: string;
 }
 
+interface MethodStat {
+  methodId: PsychMethod;
+  methodName: string;
+  count: number;
+  percentage: number;
+  color: string;
+  icon: any;
+}
+
 /**
  * Генерирует умные рекомендации на основе данных пользователя
  */
@@ -145,6 +154,7 @@ const Analytics: React.FC = () => {
   const [visualizationsCount, setVisualizationsCount] = useState(0);
   const [daysOfJournaling, setDaysOfJournaling] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [methodStats, setMethodStats] = useState<MethodStat[]>([]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -170,6 +180,29 @@ const Analytics: React.FC = () => {
           setDaysOfJournaling(days);
         }
 
+        // Calculate method statistics
+        const methodCounts = new Map<PsychMethod, number>();
+        entries.forEach(entry => {
+          const method = entry.dreamData.method;
+          methodCounts.set(method, (methodCounts.get(method) || 0) + 1);
+        });
+
+        const methodStatsData: MethodStat[] = Array.from(methodCounts.entries())
+          .map(([methodId, count]) => {
+            const methodInfo = PSYCH_METHODS.find(m => m.id === methodId);
+            return {
+              methodId,
+              methodName: methodInfo?.name || methodId,
+              count,
+              percentage: (count / entries.length) * 100,
+              color: methodInfo?.color || 'text-slate-300',
+              icon: methodInfo?.icon || Activity
+            };
+          })
+          .sort((a, b) => b.count - a.count); // Сортировка по убыванию
+
+        setMethodStats(methodStatsData);
+
         // Generate recommendations
         const recs = generateRecommendations(entries, analyzed);
         setRecommendations(recs);
@@ -177,7 +210,8 @@ const Analytics: React.FC = () => {
         console.log('📊 Analytics loaded:', {
           analyzed,
           entriesCount: entries.length,
-          recommendations: recs.length
+          recommendations: recs.length,
+          methods: methodStatsData.length
         });
 
       } catch (error) {
@@ -318,38 +352,82 @@ const Analytics: React.FC = () => {
            </div>
         </TiltCard>
 
-        {/* Methods Spectrum */}
+        {/* Methods Analysis */}
         <TiltCard className="glass-panel p-6 rounded-2xl bg-slate-900/60">
-           <h3 className="text-lg font-bold text-slate-200 mb-6">Спектр методов</h3>
-           <div className="space-y-4">
-              <div>
-                 <div className="flex justify-between text-sm mb-1">
-                    <span className="text-indigo-300">Юнгианский анализ</span>
-                    <span className="text-slate-400">60%</span>
+           <h3 className="text-lg font-bold text-slate-200 mb-6">Анализ по методам</h3>
+
+           {loading || methodStats.length === 0 ? (
+             <div className="flex items-center justify-center h-48 text-slate-500">
+               {loading ? '...' : 'Нет данных о методах'}
+             </div>
+           ) : (
+             <div className="space-y-6">
+               {/* Simple Pie Chart Visualization */}
+               <div className="flex items-center justify-center">
+                 <div className="relative w-48 h-48">
+                   <svg viewBox="0 0 200 200" className="transform -rotate-90">
+                     {(() => {
+                       let currentAngle = 0;
+                       const colors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6'];
+
+                       return methodStats.map((stat, idx) => {
+                         const angle = (stat.percentage / 100) * 360;
+                         const startAngle = currentAngle;
+                         currentAngle += angle;
+
+                         // Convert to radians
+                         const startRad = (startAngle * Math.PI) / 180;
+                         const endRad = (currentAngle * Math.PI) / 180;
+
+                         // Calculate path
+                         const x1 = 100 + 80 * Math.cos(startRad);
+                         const y1 = 100 + 80 * Math.sin(startRad);
+                         const x2 = 100 + 80 * Math.cos(endRad);
+                         const y2 = 100 + 80 * Math.sin(endRad);
+
+                         const largeArc = angle > 180 ? 1 : 0;
+
+                         return (
+                           <path
+                             key={idx}
+                             d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                             fill={colors[idx % colors.length]}
+                             opacity="0.8"
+                             className="hover:opacity-100 transition-opacity"
+                           />
+                         );
+                       });
+                     })()}
+                     {/* Center circle */}
+                     <circle cx="100" cy="100" r="50" fill="#0f172a" />
+                   </svg>
                  </div>
-                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full w-[60%] bg-indigo-500 rounded-full"></div>
-                 </div>
-              </div>
-              <div>
-                 <div className="flex justify-between text-sm mb-1">
-                    <span className="text-rose-300">Фрейдистский анализ</span>
-                    <span className="text-slate-400">25%</span>
-                 </div>
-                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full w-[25%] bg-rose-500 rounded-full"></div>
-                 </div>
-              </div>
-              <div>
-                 <div className="flex justify-between text-sm mb-1">
-                    <span className="text-teal-300">Гештальт</span>
-                    <span className="text-slate-400">15%</span>
-                 </div>
-                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full w-[15%] bg-teal-500 rounded-full"></div>
-                 </div>
-              </div>
-           </div>
+               </div>
+
+               {/* Top 3 Methods List */}
+               <div className="space-y-3">
+                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Топ-3 метода</h4>
+                 {methodStats.slice(0, 3).map((stat, idx) => {
+                   const Icon = stat.icon;
+                   return (
+                     <div key={idx} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors">
+                       <div className="flex items-center gap-3">
+                         <div className="flex items-center justify-center w-8 h-8 bg-slate-900 rounded-lg">
+                           <span className="text-lg font-bold text-indigo-400">#{idx + 1}</span>
+                         </div>
+                         <Icon size={18} className={stat.color} />
+                         <span className="text-slate-200 font-medium">{stat.methodName}</span>
+                       </div>
+                       <div className="flex items-center gap-3">
+                         <span className="text-slate-400 text-sm">{stat.count} {stat.count === 1 ? 'сон' : 'снов'}</span>
+                         <span className="text-indigo-300 font-bold">{stat.percentage.toFixed(0)}%</span>
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             </div>
+           )}
         </TiltCard>
       </div>
     </div>
