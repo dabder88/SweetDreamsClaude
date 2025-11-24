@@ -4,6 +4,7 @@ import { Plus, Sparkles, Brain, Calendar, ArrowRight } from 'lucide-react';
 import TiltCard from './TiltCard';
 import { AppView, User, JournalEntry } from '../types';
 import { getJournalEntries } from '../services/supabaseStorageService';
+import { getTotalAnalyzedDreams } from '../services/statsService';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -13,12 +14,17 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalAnalyzed, setTotalAnalyzed] = useState(0);
 
   useEffect(() => {
     const loadEntries = async () => {
       try {
         const loadedEntries = await getJournalEntries();
         setEntries(loadedEntries);
+
+        // Load total analyzed dreams count (separate from saved entries)
+        const analyzed = getTotalAnalyzedDreams();
+        setTotalAnalyzed(analyzed);
       } catch (error) {
         console.error('Error loading entries:', error);
       } finally {
@@ -100,11 +106,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
                 <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs font-bold border border-indigo-500/30">ИССЛЕДОВАТЕЛЬ</span>
              </div>
              
-             <div className="text-right text-xs text-slate-400 mb-2">{entries.length} / 10 снов</div>
+             <div className="text-right text-xs text-slate-400 mb-2">{totalAnalyzed} / 10 снов</div>
              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-6">
                 <div
                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-500"
-                  style={{ width: `${Math.min((entries.length / 10) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totalAnalyzed / 10) * 100, 100)}%` }}
                 ></div>
              </div>
 

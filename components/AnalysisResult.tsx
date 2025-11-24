@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeDream, visualizeDream } from '../services/geminiService';
 import { saveJournalEntry } from '../services/supabaseStorageService';
+import { incrementAnalyzedDreams } from '../services/statsService';
 import { DreamData, JournalEntry, AnalysisResponse, DreamSymbol } from '../types';
-import { RefreshCw, Image as ImageIcon, Check, Save, Sparkles, Layers, Compass, Key, ChevronDown } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Check, Save, Sparkles, Layers, Compass, Key, ChevronDown, AlertCircle } from 'lucide-react';
 import Button from './Button';
 import TiltCard from './TiltCard';
 
@@ -112,6 +113,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('symbolism');
+  const [showExitWarning, setShowExitWarning] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,6 +130,9 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
         setLoading(true);
         const analysisData = await analyzeDream(data);
         setResult(analysisData);
+
+        // Increment analyzed dreams counter (regardless of whether user saves it)
+        incrementAnalyzedDreams();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Произошла ошибка при анализе.");
       } finally {
@@ -154,7 +159,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
 
   const handleSave = () => {
     if (isSaved || !result) return;
-    
+
     const entry: JournalEntry = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -163,9 +168,24 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
       imageUrl: imageUrl,
       notes: ''
     };
-    
+
     saveJournalEntry(entry);
     setIsSaved(true);
+    setShowExitWarning(false);
+  };
+
+  const handleNewAnalysis = () => {
+    if (!isSaved && result) {
+      // Show warning modal if user hasn't saved
+      setShowExitWarning(true);
+    } else {
+      onReset();
+    }
+  };
+
+  const confirmExit = () => {
+    setShowExitWarning(false);
+    onReset();
   };
 
   if (loading) {
@@ -373,26 +393,108 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset }) => {
         </div>
       </div>
 
+      {/* --- STICKY SAVE REMINDER (if not saved) --- */}
+      {!isSaved && (
+        <div className="sticky bottom-4 z-30 animate-fade-in">
+          <TiltCard className="bg-gradient-to-r from-amber-600/20 to-amber-500/20 border-2 border-amber-500/40 p-4 rounded-xl shadow-[0_0_30px_rgba(251,191,36,0.3)] backdrop-blur-md">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-amber-500/30 rounded-full flex items-center justify-center animate-pulse">
+                <AlertCircle size={24} className="text-amber-300" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-amber-200 text-sm uppercase tracking-wider mb-1">Не забудьте сохранить!</h4>
+                <p className="text-amber-100/80 text-sm">Толкование будет доступно в личном кабинете только после сохранения в журнал</p>
+              </div>
+              <Button
+                variant="primary"
+                className="flex-shrink-0 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold shadow-[0_0_20px_rgba(251,191,36,0.4)] border-none"
+                icon={<Save size={20}/>}
+                onClick={handleSave}
+              >
+                Сохранить сейчас
+              </Button>
+            </div>
+          </TiltCard>
+        </div>
+      )}
+
       {/* --- FOOTER --- */}
       <div className="border-t border-slate-800/50 pt-8 flex flex-wrap gap-6 justify-between items-center mt-8">
         <div className="text-slate-500 text-sm">
-          
+          {isSaved && (
+            <div className="flex items-center gap-2 text-emerald-400">
+              <Check size={16} />
+              <span>Толкование сохранено в вашем журнале</span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Button 
-            variant={isSaved ? "secondary" : "outline"}
-            className={`w-full sm:w-auto text-base py-3 ${isSaved ? 'text-emerald-400 border-emerald-500/30 bg-emerald-900/10' : ''}`}
+          <Button
+            variant={isSaved ? "secondary" : "primary"}
+            className={`w-full sm:w-auto text-base py-3 ${
+              isSaved
+                ? 'text-emerald-400 border-emerald-500/30 bg-emerald-900/10'
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-[0_0_20px_rgba(99,102,241,0.4)]'
+            }`}
             icon={isSaved ? <Check size={20}/> : <Save size={20}/>}
             onClick={handleSave}
             disabled={isSaved}
           >
             {isSaved ? 'Сохранено в журнал' : 'Сохранить в журнал'}
           </Button>
-          <Button onClick={onReset} variant="primary" icon={<RefreshCw size={20}/>} className="w-full sm:w-auto text-base py-3">
+          <Button onClick={handleNewAnalysis} variant="outline" icon={<RefreshCw size={20}/>} className="w-full sm:w-auto text-base py-3">
             Новый анализ
           </Button>
         </div>
       </div>
+
+      {/* --- EXIT WARNING MODAL --- */}
+      {showExitWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <TiltCard className="max-w-md w-full bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-8 shadow-2xl">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex-shrink-0 w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
+                <AlertCircle size={28} className="text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-serif font-bold text-white mb-2">Толкование не сохранено!</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Вы не сохранили толкование в журнал. Если вы продолжите, оно будет потеряно и не будет доступно в личном кабинете.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  handleSave();
+                  setShowExitWarning(false);
+                }}
+                icon={<Save size={20}/>}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400"
+              >
+                Сохранить и выйти
+              </Button>
+              <Button
+                variant="outline"
+                onClick={confirmExit}
+                className="flex-1 text-red-400 border-red-500/30 hover:bg-red-900/20"
+              >
+                Выйти без сохранения
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowExitWarning(false)}
+              className="mt-4 w-full text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Отмена
+            </button>
+          </TiltCard>
+        </div>
+      )}
 
     </div>
   );
