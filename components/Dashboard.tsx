@@ -235,15 +235,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
                      // Get days in current month
                      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-                     // Create set of days with dreams
-                     const dreamDays = new Set(
-                       entries
-                         .filter(e => {
-                           const d = new Date(e.timestamp);
-                           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                         })
-                         .map(e => new Date(e.timestamp).getDate())
-                     );
+                     // Create map of days with dreams (day -> entry)
+                     const dreamDaysMap = new Map<number, JournalEntry>();
+                     entries
+                       .filter(e => {
+                         const d = new Date(e.timestamp);
+                         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                       })
+                       .forEach(e => {
+                         const day = new Date(e.timestamp).getDate();
+                         // Store the most recent entry for each day
+                         if (!dreamDaysMap.has(day) || e.timestamp > dreamDaysMap.get(day)!.timestamp) {
+                           dreamDaysMap.set(day, e);
+                         }
+                       });
 
                      const cells = [];
 
@@ -256,21 +261,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
 
                      // Days of month
                      for (let day = 1; day <= daysInMonth; day++) {
-                       const hasDream = dreamDays.has(day);
+                       const dreamEntry = dreamDaysMap.get(day);
+                       const hasDream = dreamEntry !== undefined;
                        const isToday = day === today.getDate();
 
                        cells.push(
                          <div
                            key={day}
+                           onClick={() => {
+                             if (hasDream) {
+                               onNavigate('journal');
+                             }
+                           }}
                            className={`
                              aspect-square rounded-md flex items-center justify-center text-[11px] font-medium
                              transition-all
                              ${hasDream
-                               ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                               ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] cursor-pointer hover:bg-emerald-500/40 hover:scale-105'
                                : 'bg-slate-800/40 text-slate-600'
                              }
                              ${isToday ? 'ring-2 ring-amber-400/50' : ''}
                            `}
+                           title={hasDream ? 'Перейти к записи' : ''}
                          >
                            {day}
                          </div>
