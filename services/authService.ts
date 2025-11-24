@@ -30,6 +30,8 @@ export const signUp = async (email: string, password: string): Promise<AuthRespo
           id: data.user.id,
           email: data.user.email || '',
           created_at: data.user.created_at || new Date().toISOString(),
+          name: data.user.user_metadata?.name,
+          avatar_url: data.user.user_metadata?.avatar_url,
         },
         error: null,
       };
@@ -61,6 +63,8 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
           id: data.user.id,
           email: data.user.email || '',
           created_at: data.user.created_at || new Date().toISOString(),
+          name: data.user.user_metadata?.name,
+          avatar_url: data.user.user_metadata?.avatar_url,
         },
         error: null,
       };
@@ -99,6 +103,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
         id: user.id,
         email: user.email || '',
         created_at: user.created_at || new Date().toISOString(),
+        name: user.user_metadata?.name,
+        avatar_url: user.user_metadata?.avatar_url,
       };
     }
 
@@ -119,6 +125,8 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
         id: session.user.id,
         email: session.user.email || '',
         created_at: session.user.created_at || new Date().toISOString(),
+        name: session.user.user_metadata?.name,
+        avatar_url: session.user.user_metadata?.avatar_url,
       });
     } else {
       callback(null);
@@ -138,5 +146,115 @@ export const resetPassword = async (email: string): Promise<{ error: AuthError |
     return { error: null };
   } catch (err) {
     return { error: { message: 'Ошибка сброса пароля' } };
+  }
+};
+
+/**
+ * Update user password
+ */
+export const updatePassword = async (newPassword: string): Promise<{ error: AuthError | null }> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) {
+      return { error: { message: error.message } };
+    }
+    return { error: null };
+  } catch (err) {
+    return { error: { message: 'Ошибка смены пароля' } };
+  }
+};
+
+/**
+ * Update user email (requires confirmation)
+ */
+export const updateEmail = async (newEmail: string): Promise<{ error: AuthError | null }> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      email: newEmail
+    });
+    if (error) {
+      return { error: { message: error.message } };
+    }
+    return { error: null };
+  } catch (err) {
+    return { error: { message: 'Ошибка смены email' } };
+  }
+};
+
+/**
+ * Update user metadata (name, avatar_url, etc.)
+ */
+export const updateUserMetadata = async (metadata: { name?: string; avatar_url?: string }): Promise<{ error: AuthError | null }> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      data: metadata
+    });
+    if (error) {
+      return { error: { message: error.message } };
+    }
+    return { error: null };
+  } catch (err) {
+    return { error: { message: 'Ошибка обновления профиля' } };
+  }
+};
+
+/**
+ * Upload avatar to Supabase Storage
+ */
+export const uploadAvatar = async (file: File, userId: string): Promise<{ url: string | null; error: AuthError | null }> => {
+  try {
+    // Create unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    // Upload file to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('user-data')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (uploadError) {
+      return { url: null, error: { message: uploadError.message } };
+    }
+
+    // Get public URL
+    const { data } = supabase.storage
+      .from('user-data')
+      .getPublicUrl(filePath);
+
+    return { url: data.publicUrl, error: null };
+  } catch (err) {
+    return { url: null, error: { message: 'Ошибка загрузки аватара' } };
+  }
+};
+
+/**
+ * Delete avatar from Supabase Storage
+ */
+export const deleteAvatar = async (avatarUrl: string): Promise<{ error: AuthError | null }> => {
+  try {
+    // Extract file path from URL
+    const urlParts = avatarUrl.split('/user-data/');
+    if (urlParts.length < 2) {
+      return { error: { message: 'Неверный URL аватара' } };
+    }
+    const filePath = urlParts[1];
+
+    const { error } = await supabase.storage
+      .from('user-data')
+      .remove([filePath]);
+
+    if (error) {
+      return { error: { message: error.message } };
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: { message: 'Ошибка удаления аватара' } };
   }
 };

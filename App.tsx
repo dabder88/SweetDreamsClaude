@@ -350,7 +350,7 @@ function App() {
           {view === 'journal' && <DreamJournal onViewDream={handleViewDream} />}
           {view === 'dreamView' && selectedDream && <DreamView entry={selectedDream} onBack={handleBackToJournal} />}
           {view === 'analytics' && <Analytics />}
-          {view === 'settings' && <Settings />}
+          {view === 'settings' && <Settings user={user} onUserUpdate={setUser} />}
           
           {/* Placeholders for future views */}
           {view === 'archetypes' && (

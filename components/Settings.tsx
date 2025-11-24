@@ -1,18 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TiltCard from './TiltCard';
 import Button from './Button';
 import {
-  User, Mail, Bell, Shield, Download, Trash2,
-  CreditCard, Check, AlertTriangle, Moon, Globe
+  User, Mail, Bell, Shield, Download, Trash2, Lock,
+  CreditCard, Check, AlertTriangle, Moon, Globe, Camera, X, Edit2
 } from 'lucide-react';
 import { getJournalEntries } from '../services/supabaseStorageService';
+import { User as UserType } from '../types';
+import {
+  updatePassword,
+  updateEmail,
+  updateUserMetadata,
+  uploadAvatar,
+  deleteAvatar,
+  getCurrentUser
+} from '../services/authService';
 
-const Settings: React.FC = () => {
+interface SettingsProps {
+  user: UserType | null;
+  onUserUpdate: (user: UserType) => void;
+}
+
+const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const [loadingExport, setLoadingExport] = useState(false);
-
-  // Mock toggle states
   const [notifications, setNotifications] = useState(true);
   const [englishMode, setEnglishMode] = useState(false);
+
+  // Profile editing states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [name, setName] = useState(user?.name || '');
+  const [savingName, setSavingName] = useState(false);
+
+  // Avatar states
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deletingAvatar, setDeletingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Password change states
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // Email change states
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState(false);
+
+  useEffect(() => {
+    setName(user?.name || '');
+  }, [user]);
 
   // --- ACTIONS ---
 
@@ -50,11 +91,189 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleSaveName = async () => {
+    if (!name.trim()) {
+      alert('Имя не может быть пустым');
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      const { error } = await updateUserMetadata({ name: name.trim() });
+      if (error) {
+        alert(error.message);
+      } else {
+        // Refresh user data
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+        setIsEditingName(false);
+      }
+    } catch (e) {
+      alert('Ошибка сохранения имени');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Пожалуйста, выберите изображение');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Размер файла не должен превышать 2MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Delete old avatar if exists
+      if (user.avatar_url) {
+        await deleteAvatar(user.avatar_url);
+      }
+
+      // Upload new avatar
+      const { url, error } = await uploadAvatar(file, user.id);
+      if (error) {
+        alert(error.message);
+      } else if (url) {
+        // Update user metadata
+        await updateUserMetadata({ avatar_url: url });
+
+        // Refresh user data
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+      }
+    } catch (e) {
+      alert('Ошибка загрузки аватара');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!user?.avatar_url) return;
+
+    const confirm = window.confirm('Удалить аватар?');
+    if (!confirm) return;
+
+    setDeletingAvatar(true);
+    try {
+      const { error: deleteError } = await deleteAvatar(user.avatar_url);
+      if (deleteError) {
+        alert(deleteError.message);
+        return;
+      }
+
+      // Update user metadata
+      const { error: updateError } = await updateUserMetadata({ avatar_url: '' });
+      if (updateError) {
+        alert(updateError.message);
+      } else {
+        // Refresh user data
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+      }
+    } catch (e) {
+      alert('Ошибка удаления аватара');
+    } finally {
+      setDeletingAvatar(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    if (newPassword.length < 6) {
+      setPasswordError('Пароль должен быть не менее 6 символов');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Пароли не совпадают');
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const { error } = await updatePassword(newPassword);
+      if (error) {
+        setPasswordError(error.message);
+      } else {
+        setPasswordSuccess(true);
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => {
+          setShowPasswordForm(false);
+          setPasswordSuccess(false);
+        }, 2000);
+      }
+    } catch (e) {
+      setPasswordError('Ошибка смены пароля');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    setEmailError('');
+    setEmailSuccess(false);
+
+    if (!newEmail.includes('@')) {
+      setEmailError('Неверный формат email');
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const { error } = await updateEmail(newEmail);
+      if (error) {
+        setEmailError(error.message);
+      } else {
+        setEmailSuccess(true);
+        setNewEmail('');
+        setTimeout(() => {
+          setShowEmailForm(false);
+          setEmailSuccess(false);
+        }, 3000);
+      }
+    } catch (e) {
+      setEmailError('Ошибка смены email');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   // --- STYLES ---
   const sectionTitleStyle = "text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 ml-1";
   const cardStyle = "glass-panel p-6 rounded-2xl bg-slate-900/60 border border-slate-700/50";
   const inputStyle = "w-full bg-slate-950/80 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors";
   const labelStyle = "block text-sm text-slate-400 mb-2 font-medium";
+
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
 
   return (
     <div className="animate-fade-in space-y-8 pb-10">
@@ -64,39 +283,236 @@ const Settings: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* LEFT COLUMN: Profile & Preferences */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Profile Section */}
           <div>
             <h3 className={sectionTitleStyle}>Учетная запись</h3>
             <TiltCard className={cardStyle}>
                <div className="flex items-start gap-6 mb-8">
-                  <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-500 flex items-center justify-center shrink-0">
-                     <User size={32} className="text-indigo-300"/>
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    <div
+                      className={`w-20 h-20 rounded-full border-2 border-indigo-500 flex items-center justify-center overflow-hidden bg-slate-800 ${uploadingAvatar || deletingAvatar ? 'opacity-50' : ''}`}
+                    >
+                      {user?.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt="Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User size={32} className="text-indigo-300"/>
+                      )}
+                    </div>
+
+                    {/* Avatar Actions */}
+                    <div className="absolute -bottom-1 -right-1 flex gap-1">
+                      <button
+                        onClick={handleAvatarClick}
+                        disabled={uploadingAvatar || deletingAvatar}
+                        className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+                        title="Загрузить аватар"
+                      >
+                        <Camera size={14} />
+                      </button>
+                      {user?.avatar_url && (
+                        <button
+                          onClick={handleDeleteAvatar}
+                          disabled={uploadingAvatar || deletingAvatar}
+                          className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
+                          title="Удалить аватар"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
                   </div>
+
                   <div className="flex-1">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Name */}
                         <div>
                            <label className={labelStyle}>Имя</label>
-                           <div className="relative">
-                              <User size={16} className="absolute left-3 top-3.5 text-slate-500"/>
-                              <input type="text" value="Антон" readOnly className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`} />
-                           </div>
+                           {isEditingName ? (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <User size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <input
+                                   type="text"
+                                   value={name}
+                                   onChange={(e) => setName(e.target.value)}
+                                   className={`${inputStyle} pl-10`}
+                                   placeholder="Ваше имя"
+                                   disabled={savingName}
+                                 />
+                               </div>
+                               <button
+                                 onClick={handleSaveName}
+                                 disabled={savingName}
+                                 className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                               >
+                                 {savingName ? '...' : <Check size={16} />}
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setIsEditingName(false);
+                                   setName(user?.name || '');
+                                 }}
+                                 disabled={savingName}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                               >
+                                 <X size={16} />
+                               </button>
+                             </div>
+                           ) : (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <User size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <div className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`}>
+                                   {user?.name || 'Не указано'}
+                                 </div>
+                               </div>
+                               <button
+                                 onClick={() => setIsEditingName(true)}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                               >
+                                 <Edit2 size={16} />
+                               </button>
+                             </div>
+                           )}
                         </div>
+
+                        {/* Email */}
                         <div>
                            <label className={labelStyle}>Email</label>
                            <div className="relative">
                               <Mail size={16} className="absolute left-3 top-3.5 text-slate-500"/>
-                              <input type="email" value="brainpinky@bk.ru" readOnly className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`} />
+                              <div className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`}>
+                                {user?.email}
+                              </div>
                            </div>
                         </div>
                      </div>
+
                      <p className="text-xs text-slate-500 mt-3">
-                        * Редактирование профиля временно недоступно в демо-режиме.
+                        Дата регистрации: {user?.created_at ? formatDate(user.created_at) : 'N/A'}
                      </p>
                   </div>
+               </div>
+
+               {/* Password Change */}
+               <div className="mb-6 pb-6 border-b border-slate-700/50">
+                 <div className="flex items-center justify-between mb-3">
+                   <h4 className="text-sm font-bold text-slate-300">Изменить пароль</h4>
+                   <button
+                     onClick={() => setShowPasswordForm(!showPasswordForm)}
+                     className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                   >
+                     {showPasswordForm ? 'Отмена' : 'Изменить'}
+                   </button>
+                 </div>
+
+                 {showPasswordForm && (
+                   <div className="space-y-3 animate-fade-in">
+                     <div>
+                       <input
+                         type="password"
+                         value={newPassword}
+                         onChange={(e) => setNewPassword(e.target.value)}
+                         placeholder="Новый пароль (мин. 6 символов)"
+                         className={inputStyle}
+                         disabled={savingPassword}
+                       />
+                     </div>
+                     <div>
+                       <input
+                         type="password"
+                         value={confirmPassword}
+                         onChange={(e) => setConfirmPassword(e.target.value)}
+                         placeholder="Подтвердите пароль"
+                         className={inputStyle}
+                         disabled={savingPassword}
+                       />
+                     </div>
+                     {passwordError && (
+                       <p className="text-xs text-red-400 flex items-center gap-1">
+                         <AlertTriangle size={12} /> {passwordError}
+                       </p>
+                     )}
+                     {passwordSuccess && (
+                       <p className="text-xs text-emerald-400 flex items-center gap-1">
+                         <Check size={12} /> Пароль успешно изменён
+                       </p>
+                     )}
+                     <Button
+                       variant="primary"
+                       onClick={handleChangePassword}
+                       isLoading={savingPassword}
+                       className="text-sm py-2"
+                     >
+                       Сохранить пароль
+                     </Button>
+                   </div>
+                 )}
+               </div>
+
+               {/* Email Change */}
+               <div>
+                 <div className="flex items-center justify-between mb-3">
+                   <h4 className="text-sm font-bold text-slate-300">Изменить Email</h4>
+                   <button
+                     onClick={() => setShowEmailForm(!showEmailForm)}
+                     className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                   >
+                     {showEmailForm ? 'Отмена' : 'Изменить'}
+                   </button>
+                 </div>
+
+                 {showEmailForm && (
+                   <div className="space-y-3 animate-fade-in">
+                     <div>
+                       <input
+                         type="email"
+                         value={newEmail}
+                         onChange={(e) => setNewEmail(e.target.value)}
+                         placeholder="Новый email"
+                         className={inputStyle}
+                         disabled={savingEmail}
+                       />
+                     </div>
+                     {emailError && (
+                       <p className="text-xs text-red-400 flex items-center gap-1">
+                         <AlertTriangle size={12} /> {emailError}
+                       </p>
+                     )}
+                     {emailSuccess && (
+                       <p className="text-xs text-emerald-400 flex items-center gap-1">
+                         <Check size={12} /> Письмо с подтверждением отправлено на новый email
+                       </p>
+                     )}
+                     <Button
+                       variant="primary"
+                       onClick={handleChangeEmail}
+                       isLoading={savingEmail}
+                       className="text-sm py-2"
+                     >
+                       Изменить Email
+                     </Button>
+                     <p className="text-xs text-slate-500">
+                       После смены на новый email будет отправлено письмо с подтверждением
+                     </p>
+                   </div>
+                 )}
                </div>
             </TiltCard>
           </div>
@@ -105,11 +521,11 @@ const Settings: React.FC = () => {
           <div>
             <h3 className={sectionTitleStyle}>Интерфейс и Уведомления</h3>
             <TiltCard className={`${cardStyle} space-y-6`}>
-               
+
                {/* Language Toggle */}
                <div className="flex items-center justify-between pb-6 border-b border-slate-700/50">
                   <div className="flex items-center gap-4">
-                     <div className="p-2bg-slate-800 rounded-lg text-indigo-400">
+                     <div className="p-2 bg-slate-800 rounded-lg text-indigo-400">
                         <Globe size={20} />
                      </div>
                      <div>
@@ -125,7 +541,7 @@ const Settings: React.FC = () => {
                {/* Notifications Toggle */}
                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                     <div className="bg-slate-800 rounded-lg text-amber-400">
+                     <div className="bg-slate-800 rounded-lg text-amber-400 p-2">
                         <Bell size={20} />
                      </div>
                      <div>
@@ -166,7 +582,7 @@ const Settings: React.FC = () => {
                            <p className="text-xs text-red-400/60">Необратимое действие. Удалит локальное хранилище.</p>
                         </div>
                      </div>
-                     <button 
+                     <button
                         onClick={handleClearData}
                         className="px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 text-sm font-medium transition-colors"
                      >
@@ -181,7 +597,7 @@ const Settings: React.FC = () => {
 
         {/* RIGHT COLUMN: Subscription & Info */}
         <div className="space-y-8">
-          
+
           {/* Subscription Card */}
           <div>
              <h3 className={sectionTitleStyle}>Подписка</h3>
@@ -189,7 +605,7 @@ const Settings: React.FC = () => {
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                    <CreditCard size={100} />
                 </div>
-                
+
                 <div className="relative z-10">
                    <div className="inline-block px-3 py-1 rounded bg-slate-700/50 text-slate-300 text-xs font-bold mb-4 border border-slate-600">
                       ТЕКУЩИЙ ПЛАН
@@ -226,7 +642,7 @@ const Settings: React.FC = () => {
                  <div>
                     <h4 className="text-slate-200 font-medium text-sm">Безопасность данных</h4>
                     <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                       Ваши сны хранятся локально в вашем браузере. PsyDream не передает ваши личные записи на серверы для хранения.
+                       Ваши сны защищены Row Level Security в Supabase. Только вы имеете доступ к своим записям.
                     </p>
                  </div>
               </div>
@@ -234,7 +650,7 @@ const Settings: React.FC = () => {
 
           {/* Footer Info */}
           <div className="text-center">
-             <p className="text-xs text-slate-600">PsyDream v1.2.0 (Beta)</p>
+             <p className="text-xs text-slate-600">PsyDream v1.3.0 (Beta)</p>
              <div className="flex justify-center gap-4 mt-2">
                 <a href="#" className="text-xs text-slate-500 hover:text-indigo-400">Политика конфиденциальности</a>
                 <a href="#" className="text-xs text-slate-500 hover:text-indigo-400">Условия использования</a>

@@ -42,6 +42,8 @@ export interface User {
   id: string;
   email: string;
   created_at: string;
+  name?: string; // Display name
+  avatar_url?: string; // Avatar image URL from Supabase Storage
 }
 
 export interface JournalEntry {
