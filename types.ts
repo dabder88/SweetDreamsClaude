@@ -44,6 +44,8 @@ export interface User {
   created_at: string;
   name?: string; // Display name
   avatar_url?: string; // Avatar image URL from Supabase Storage
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'; // User's gender
+  date_of_birth?: string; // ISO date string (YYYY-MM-DD)
 }
 
 export interface JournalEntry {

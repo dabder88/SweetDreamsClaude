@@ -32,6 +32,8 @@ export const signUp = async (email: string, password: string): Promise<AuthRespo
           created_at: data.user.created_at || new Date().toISOString(),
           name: data.user.user_metadata?.name,
           avatar_url: data.user.user_metadata?.avatar_url,
+          gender: data.user.user_metadata?.gender,
+          date_of_birth: data.user.user_metadata?.date_of_birth,
         },
         error: null,
       };
@@ -65,6 +67,8 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
           created_at: data.user.created_at || new Date().toISOString(),
           name: data.user.user_metadata?.name,
           avatar_url: data.user.user_metadata?.avatar_url,
+          gender: data.user.user_metadata?.gender,
+          date_of_birth: data.user.user_metadata?.date_of_birth,
         },
         error: null,
       };
@@ -105,6 +109,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
         created_at: user.created_at || new Date().toISOString(),
         name: user.user_metadata?.name,
         avatar_url: user.user_metadata?.avatar_url,
+        gender: user.user_metadata?.gender,
+        date_of_birth: user.user_metadata?.date_of_birth,
       };
     }
 
@@ -127,6 +133,8 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
         created_at: session.user.created_at || new Date().toISOString(),
         name: session.user.user_metadata?.name,
         avatar_url: session.user.user_metadata?.avatar_url,
+        gender: session.user.user_metadata?.gender,
+        date_of_birth: session.user.user_metadata?.date_of_birth,
       });
     } else {
       callback(null);
@@ -184,9 +192,14 @@ export const updateEmail = async (newEmail: string): Promise<{ error: AuthError 
 };
 
 /**
- * Update user metadata (name, avatar_url, etc.)
+ * Update user metadata (name, avatar_url, gender, date_of_birth, etc.)
  */
-export const updateUserMetadata = async (metadata: { name?: string; avatar_url?: string }): Promise<{ error: AuthError | null }> => {
+export const updateUserMetadata = async (metadata: {
+  name?: string;
+  avatar_url?: string;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  date_of_birth?: string;
+}): Promise<{ error: AuthError | null }> => {
   try {
     const { error } = await supabase.auth.updateUser({
       data: metadata

@@ -3,7 +3,7 @@ import TiltCard from './TiltCard';
 import Button from './Button';
 import {
   User, Mail, Bell, Shield, Download, Trash2, Lock,
-  CreditCard, Check, AlertTriangle, Moon, Globe, Camera, X, Edit2, Sparkles, FileText, UserX
+  CreditCard, Check, AlertTriangle, Moon, Globe, Camera, X, Edit2, Sparkles, FileText, UserX, Calendar, Users
 } from 'lucide-react';
 import { getJournalEntries, deleteAllUserData } from '../services/supabaseStorageService';
 import { User as UserType, JournalEntry, AnalysisResponse } from '../types';
@@ -35,6 +35,14 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const [name, setName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
 
+  const [isEditingGender, setIsEditingGender] = useState(false);
+  const [gender, setGender] = useState(user?.gender || '');
+  const [savingGender, setSavingGender] = useState(false);
+
+  const [isEditingDateOfBirth, setIsEditingDateOfBirth] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState(user?.date_of_birth || '');
+  const [savingDateOfBirth, setSavingDateOfBirth] = useState(false);
+
   // Avatar states
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [deletingAvatar, setDeletingAvatar] = useState(false);
@@ -57,6 +65,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
 
   useEffect(() => {
     setName(user?.name || '');
+    setGender(user?.gender || '');
+    setDateOfBirth(user?.date_of_birth || '');
   }, [user]);
 
   // --- ACTIONS ---
@@ -330,6 +340,58 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       alert('Ошибка сохранения имени');
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const handleSaveGender = async () => {
+    if (!gender) {
+      alert('Пол не может быть пустым');
+      return;
+    }
+
+    setSavingGender(true);
+    try {
+      const { error } = await updateUserMetadata({
+        gender: gender as 'male' | 'female' | 'other' | 'prefer-not-to-say'
+      });
+      if (error) {
+        alert(error.message);
+      } else {
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+        setIsEditingGender(false);
+      }
+    } catch (e) {
+      alert('Ошибка сохранения пола');
+    } finally {
+      setSavingGender(false);
+    }
+  };
+
+  const handleSaveDateOfBirth = async () => {
+    if (!dateOfBirth) {
+      alert('Дата рождения не может быть пустой');
+      return;
+    }
+
+    setSavingDateOfBirth(true);
+    try {
+      const { error } = await updateUserMetadata({ date_of_birth: dateOfBirth });
+      if (error) {
+        alert(error.message);
+      } else {
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+        setIsEditingDateOfBirth(false);
+      }
+    } catch (e) {
+      alert('Ошибка сохранения даты рождения');
+    } finally {
+      setSavingDateOfBirth(false);
     }
   };
 
@@ -631,6 +693,124 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                                 {user?.email}
                               </div>
                            </div>
+                        </div>
+
+                        {/* Gender */}
+                        <div>
+                           <label className={labelStyle}>Пол</label>
+                           {isEditingGender ? (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <Users size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <select
+                                   value={gender}
+                                   onChange={(e) => setGender(e.target.value)}
+                                   className={`${inputStyle} pl-10`}
+                                   disabled={savingGender}
+                                 >
+                                   <option value="">Выберите пол</option>
+                                   <option value="male">Мужской</option>
+                                   <option value="female">Женский</option>
+                                   <option value="other">Другой</option>
+                                   <option value="prefer-not-to-say">Предпочитаю не указывать</option>
+                                 </select>
+                               </div>
+                               <button
+                                 onClick={handleSaveGender}
+                                 disabled={savingGender}
+                                 className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                                 title="Сохранить"
+                               >
+                                 {savingGender ? '...' : <Check size={16} />}
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setIsEditingGender(false);
+                                   setGender(user?.gender || '');
+                                 }}
+                                 disabled={savingGender}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                 title="Отменить"
+                               >
+                                 <X size={16} />
+                               </button>
+                             </div>
+                           ) : (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <Users size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <div className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`}>
+                                   {user?.gender === 'male' ? 'Мужской' :
+                                    user?.gender === 'female' ? 'Женский' :
+                                    user?.gender === 'other' ? 'Другой' :
+                                    user?.gender === 'prefer-not-to-say' ? 'Предпочитаю не указывать' :
+                                    'Не указано'}
+                                 </div>
+                               </div>
+                               <button
+                                 onClick={() => setIsEditingGender(true)}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                                 title="Редактировать"
+                               >
+                                 <Edit2 size={16} />
+                               </button>
+                             </div>
+                           )}
+                        </div>
+
+                        {/* Date of Birth */}
+                        <div>
+                           <label className={labelStyle}>Дата рождения</label>
+                           {isEditingDateOfBirth ? (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <Calendar size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <input
+                                   type="date"
+                                   value={dateOfBirth}
+                                   onChange={(e) => setDateOfBirth(e.target.value)}
+                                   className={`${inputStyle} pl-10`}
+                                   disabled={savingDateOfBirth}
+                                   max={new Date().toISOString().split('T')[0]}
+                                 />
+                               </div>
+                               <button
+                                 onClick={handleSaveDateOfBirth}
+                                 disabled={savingDateOfBirth}
+                                 className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                                 title="Сохранить"
+                               >
+                                 {savingDateOfBirth ? '...' : <Check size={16} />}
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setIsEditingDateOfBirth(false);
+                                   setDateOfBirth(user?.date_of_birth || '');
+                                 }}
+                                 disabled={savingDateOfBirth}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                 title="Отменить"
+                               >
+                                 <X size={16} />
+                               </button>
+                             </div>
+                           ) : (
+                             <div className="flex gap-2">
+                               <div className="relative flex-1">
+                                 <Calendar size={16} className="absolute left-3 top-3.5 text-slate-500"/>
+                                 <div className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`}>
+                                   {user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('ru-RU') : 'Не указано'}
+                                 </div>
+                               </div>
+                               <button
+                                 onClick={() => setIsEditingDateOfBirth(true)}
+                                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                                 title="Редактировать"
+                               >
+                                 <Edit2 size={16} />
+                               </button>
+                             </div>
+                           )}
                         </div>
                      </div>
 
