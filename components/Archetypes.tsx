@@ -8,7 +8,9 @@ import {
   saveArchetypeProfile,
   loadArchetypeProfile,
   ArchetypeProfile,
-  getJournalEntries
+  getJournalEntries,
+  clearArchetypeProfileStaleFlag,
+  isArchetypeProfileStale
 } from '../services/supabaseStorageService';
 import { getAnalysisMetadata } from '../services/analysisMetadataService';
 import {
@@ -32,6 +34,12 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
       if (savedProfile) {
         setArchetypeScores(savedProfile.scores);
         setTopArchetypes(savedProfile.topArchetypes);
+
+        // Auto-refresh if profile is stale
+        if (isArchetypeProfileStale()) {
+          console.log('🔄 Archetype profile is stale, triggering auto-refresh...');
+          await analyzeUserArchetypes();
+        }
       }
     };
     loadSavedProfile();
@@ -124,6 +132,7 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
           analyzedDreamsCount: dreamCount
         };
         await saveArchetypeProfile(profile);
+        clearArchetypeProfileStaleFlag();
 
         setLoading(false);
         return;
@@ -177,6 +186,7 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         analyzedDreamsCount: dreamCount
       };
       await saveArchetypeProfile(profile);
+      clearArchetypeProfileStaleFlag();
 
     } catch (error) {
       console.error('Analysis error:', error);
@@ -238,6 +248,27 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         </TiltCard>
       ) : (
         <>
+          {/* Refresh Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={analyzeUserArchetypes}
+              isLoading={loading}
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-white/10"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Обновление...</span>
+                </>
+              ) : (
+                <>
+                  <TrendingUp size={18} />
+                  <span>Обновить профиль</span>
+                </>
+              )}
+            </Button>
+          </div>
+
           {/* Top 3 Archetypes */}
           <div>
             <h3 className={sectionTitleStyle}>

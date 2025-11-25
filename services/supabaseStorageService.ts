@@ -378,3 +378,40 @@ export const loadArchetypeProfile = async (): Promise<ArchetypeProfile | null> =
   // In future, we could load from Supabase here
   return null;
 };
+
+/**
+ * Mark archetype profile as stale (needs re-analysis)
+ * Called after each new dream analysis to trigger profile refresh
+ */
+export const markArchetypeProfileAsStale = (): void => {
+  try {
+    localStorage.setItem('psydream_archetype_profile_stale', 'true');
+    console.log('✅ Marked archetype profile as stale - will trigger refresh');
+  } catch (e) {
+    console.error('❌ Failed to mark profile as stale:', e);
+  }
+};
+
+/**
+ * Check if archetype profile needs refresh
+ */
+export const isArchetypeProfileStale = (): boolean => {
+  try {
+    const isStale = localStorage.getItem('psydream_archetype_profile_stale') === 'true';
+    return isStale;
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Clear stale flag after profile refresh
+ */
+export const clearArchetypeProfileStaleFlag = (): void => {
+  try {
+    localStorage.removeItem('psydream_archetype_profile_stale');
+    console.log('✅ Cleared archetype profile stale flag');
+  } catch (e) {
+    console.error('❌ Failed to clear stale flag:', e);
+  }
+};

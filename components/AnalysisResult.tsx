@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeDream, visualizeDream } from '../services/geminiService';
-import { saveJournalEntry } from '../services/supabaseStorageService';
+import { saveJournalEntry, markArchetypeProfileAsStale } from '../services/supabaseStorageService';
 import { incrementAnalyzedDreams, recordMethodUsage, recordEmotion, recordSymbols } from '../services/statsService';
 import { saveAnalysisMetadata } from '../services/analysisMetadataService';
 import { getCurrentUser } from '../services/authService';
@@ -171,6 +171,9 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
               life_situation: data.context.lifeSituation, // Save for context
             };
             await saveAnalysisMetadata(metadata);
+
+            // Mark archetype profile as stale to trigger refresh
+            markArchetypeProfileAsStale();
           }
         }
 
