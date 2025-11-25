@@ -68,6 +68,13 @@ VALUES ('user-data', 'user-data', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS Policies for user-data bucket
+-- Drop existing policies if they exist to avoid conflicts
+DROP POLICY IF EXISTS "Users can upload own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+
+-- Create new policies
 CREATE POLICY "Users can upload own avatars"
 ON storage.objects FOR INSERT
 WITH CHECK (
