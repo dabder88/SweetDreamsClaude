@@ -385,6 +385,15 @@ ${dreamContext}
     console.log('🔵 [ArchetypeAnalysis] response.text:', response.text);
     console.log('🔵 [ArchetypeAnalysis] response.candidates:', response.candidates);
 
+    if (response.candidates?.[0]) {
+      console.log('🔵 [ArchetypeAnalysis] candidates[0] full object:', JSON.stringify(response.candidates[0], null, 2));
+      console.log('🔵 [ArchetypeAnalysis] candidates[0].content:', response.candidates[0].content);
+      console.log('🔵 [ArchetypeAnalysis] candidates[0].content?.parts:', response.candidates[0].content?.parts);
+      if (response.candidates[0].content?.parts?.[0]) {
+        console.log('🔵 [ArchetypeAnalysis] candidates[0].content.parts[0]:', response.candidates[0].content.parts[0]);
+      }
+    }
+
     // Try to get text from response
     let responseText = '';
     if (response.text) {
@@ -394,6 +403,7 @@ ${dreamContext}
       console.log('🔵 [ArchetypeAnalysis] Extracted text from candidates:', responseText);
     } else {
       console.error('❌ [ArchetypeAnalysis] Cannot extract text from response');
+      console.error('❌ [ArchetypeAnalysis] Full response dump:', JSON.stringify(response, null, 2));
       throw new Error('No text in API response');
     }
 
