@@ -570,64 +570,75 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
             <h3 className={sectionTitleStyle}>Учетная запись</h3>
             <TiltCard className={cardStyle}>
                <div className="flex items-start gap-6 mb-8">
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <div
-                      className={`w-20 h-20 rounded-full border-2 border-indigo-500 flex items-center justify-center overflow-hidden bg-slate-800 ${uploadingAvatar || deletingAvatar ? 'opacity-50' : ''}`}
-                    >
-                      {user?.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User size={32} className="text-indigo-300"/>
-                      )}
+                  {/* Avatar Section */}
+                  <div className="flex flex-col items-center gap-3 shrink-0">
+                    {/* Avatar */}
+                    <div className="relative">
+                      <div
+                        className={`w-20 h-20 rounded-full border-2 border-indigo-500 flex items-center justify-center overflow-hidden bg-slate-800 ${uploadingAvatar || deletingAvatar || generatingAvatar ? 'opacity-50' : ''}`}
+                      >
+                        {user?.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User size={32} className="text-indigo-300"/>
+                        )}
+                      </div>
+
+                      {/* Small Avatar Actions */}
+                      <div className="absolute -bottom-1 -right-1 flex gap-1">
+                        <button
+                          onClick={handleAvatarClick}
+                          disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
+                          className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+                          title="Загрузить аватар"
+                        >
+                          <Camera size={14} />
+                        </button>
+                        {user?.avatar_url && (
+                          <button
+                            onClick={handleDeleteAvatar}
+                            disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
+                            className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
+                            title="Удалить аватар"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
                     </div>
 
-                    {/* Avatar Actions */}
-                    <div className="absolute -bottom-1 -right-1 flex gap-1">
-                      <button
-                        onClick={handleAvatarClick}
-                        disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
-                        className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
-                        title="Загрузить аватар"
-                      >
-                        <Camera size={14} />
-                      </button>
-                      <button
-                        onClick={handleGenerateAvatar}
-                        disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
-                        className="p-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50"
-                        title="Сгенерировать аватар на основе снов (требуется минимум 1 сохранённый сон)"
-                      >
-                        {generatingAvatar ? (
+                    {/* Generate Avatar Button */}
+                    <button
+                      onClick={handleGenerateAvatar}
+                      disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
+                      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                      title="Сгенерировать аватар на основе ваших снов"
+                    >
+                      {generatingAvatar ? (
+                        <>
                           <div className="animate-spin">
                             <Sparkles size={14} />
                           </div>
-                        ) : (
+                          <span>Генерация...</span>
+                        </>
+                      ) : (
+                        <>
                           <Sparkles size={14} />
-                        )}
-                      </button>
-                      {user?.avatar_url && (
-                        <button
-                          onClick={handleDeleteAvatar}
-                          disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
-                          className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
-                          title="Удалить аватар"
-                        >
-                          <X size={14} />
-                        </button>
+                          <span>Создать из снов</span>
+                        </>
                       )}
-                    </div>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarUpload}
-                      className="hidden"
-                    />
+                    </button>
                   </div>
 
                   <div className="flex-1">
