@@ -3,10 +3,10 @@ import TiltCard from './TiltCard';
 import Button from './Button';
 import {
   User, Mail, Bell, Shield, Download, Trash2, Lock,
-  CreditCard, Check, AlertTriangle, Moon, Globe, Camera, X, Edit2
+  CreditCard, Check, AlertTriangle, Moon, Globe, Camera, X, Edit2, Sparkles, FileText, UserX
 } from 'lucide-react';
-import { getJournalEntries } from '../services/supabaseStorageService';
-import { User as UserType } from '../types';
+import { getJournalEntries, deleteAllUserData } from '../services/supabaseStorageService';
+import { User as UserType, JournalEntry, AnalysisResponse } from '../types';
 import {
   updatePassword,
   updateEmail,
@@ -15,6 +15,8 @@ import {
   deleteAvatar,
   getCurrentUser
 } from '../services/authService';
+import { supabase } from '../services/supabaseClient';
+import { visualizeDream } from '../services/geminiService';
 
 interface SettingsProps {
   user: UserType | null;
@@ -23,8 +25,10 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const [loadingExport, setLoadingExport] = useState(false);
-  const [notifications, setNotifications] = useState(true);
-  const [englishMode, setEnglishMode] = useState(false);
+  const [loadingExportTxt, setLoadingExportTxt] = useState(false);
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [clearingData, setClearingData] = useState(false);
 
   // Profile editing states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -78,16 +82,228 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
     }
   };
 
-  const handleClearData = () => {
+  const handleExportTxt = async () => {
+    setLoadingExportTxt(true);
+    try {
+      const entries = await getJournalEntries();
+
+      if (entries.length === 0) {
+        alert('Нет записей для экспорта');
+        return;
+      }
+
+      // Format entries as readable text
+      let txtContent = '═══════════════════════════════════════════════\n';
+      txtContent += '          ЖУРНАЛ СНОВИДЕНИЙ - PSYDREAM\n';
+      txtContent += '═══════════════════════════════════════════════\n\n';
+
+      entries.forEach((entry, index) => {
+        const date = new Date(entry.timestamp).toLocaleString('ru-RU');
+        const analysis = typeof entry.analysis === 'string'
+          ? entry.analysis
+          : (entry.analysis as AnalysisResponse);
+
+        txtContent += `\n${'─'.repeat(50)}\n`;
+        txtContent += `ЗАПИСЬ №${index + 1}\n`;
+        txtContent += `Дата: ${date}\n`;
+        txtContent += `Метод: ${entry.dreamData.method}\n`;
+        txtContent += `${'─'.repeat(50)}\n\n`;
+
+        txtContent += `📝 ОПИСАНИЕ СНА:\n${entry.dreamData.description}\n\n`;
+
+        if (typeof analysis !== 'string') {
+          txtContent += `📊 КРАТКОЕ РЕЗЮМЕ:\n${analysis.summary}\n\n`;
+
+          if (analysis.symbolism && analysis.symbolism.length > 0) {
+            txtContent += `🔮 СИМВОЛЫ:\n`;
+            analysis.symbolism.forEach(symbol => {
+              txtContent += `\n  • ${symbol.name}:\n    ${symbol.meaning}\n`;
+            });
+            txtContent += '\n';
+          }
+
+          txtContent += `💭 АНАЛИЗ:\n${analysis.analysis}\n\n`;
+
+          if (analysis.advice && analysis.advice.length > 0) {
+            txtContent += `💡 РЕКОМЕНДАЦИИ:\n`;
+            analysis.advice.forEach(advice => {
+              txtContent += `  • ${advice}\n`;
+            });
+            txtContent += '\n';
+          }
+        } else {
+          txtContent += `📖 АНАЛИЗ:\n${analysis}\n\n`;
+        }
+
+        if (entry.notes) {
+          txtContent += `📌 ЗАМЕТКИ:\n${entry.notes}\n\n`;
+        }
+      });
+
+      txtContent += `\n${'═'.repeat(50)}\n`;
+      txtContent += `Всего записей: ${entries.length}\n`;
+      txtContent += `Экспортировано: ${new Date().toLocaleString('ru-RU')}\n`;
+      txtContent += `${'═'.repeat(50)}\n`;
+
+      const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `psydream_journal_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export error:', e);
+      alert('Ошибка при экспорте в TXT');
+    } finally {
+      setLoadingExportTxt(false);
+    }
+  };
+
+  const handleClearData = async () => {
     const confirmDelete = window.confirm(
-      "ВНИМАНИЕ! Это удалит ВСЕ ваши записи журнала безвозвратно. Вы уверены?"
+      "ВНИМАНИЕ! Это удалит ВСЕ ваши записи журнала и метаданные из Supabase. Вы уверены?"
     );
-    if (confirmDelete) {
-      const doubleCheck = window.confirm("Вы действительно хотите стереть всю историю снов?");
-      if (doubleCheck) {
+    if (!confirmDelete) return;
+
+    const doubleCheck = window.confirm("Вы действительно хотите стереть всю историю снов? Это действие необратимо!");
+    if (!doubleCheck) return;
+
+    setClearingData(true);
+    try {
+      if (user) {
+        await deleteAllUserData();
+        alert('Все данные успешно удалены');
+        window.location.reload();
+      } else {
         localStorage.clear();
         window.location.reload();
       }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('Ошибка при удалении данных');
+    } finally {
+      setClearingData(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    const confirm1 = window.confirm(
+      "⚠️ ВНИМАНИЕ! Удаление аккаунта:\n\n" +
+      "• Удалит ВСЕ ваши данные безвозвратно\n" +
+      "• Удалит все записи снов\n" +
+      "• Удалит аватар и настройки\n" +
+      "• Это действие НЕОБРАТИМО\n\n" +
+      "Вы действительно хотите удалить аккаунт?"
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm("Последнее подтверждение: удалить аккаунт НАВСЕГДА?");
+    if (!confirm2) return;
+
+    setDeletingAccount(true);
+    try {
+      // Delete all user data first
+      await deleteAllUserData();
+
+      // Delete user account
+      const { error } = await supabase.rpc('delete_user');
+
+      if (error) {
+        // If RPC not available, just sign out (user will need to contact support)
+        console.error('Delete user error:', error);
+        alert('Не удалось удалить аккаунт автоматически. Пожалуйста, обратитесь в поддержку.');
+      } else {
+        alert('Аккаунт успешно удалён');
+      }
+
+      // Sign out and reload
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Ошибка при удалении аккаунта');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleGenerateAvatar = async () => {
+    if (!user) return;
+
+    setGeneratingAvatar(true);
+    try {
+      const entries = await getJournalEntries();
+
+      if (entries.length === 0) {
+        alert('Для генерации аватара нужен хотя бы один сохранённый сон');
+        return;
+      }
+
+      // Get most recent dream or a random one
+      const randomEntry = entries[Math.floor(Math.random() * entries.length)];
+
+      // Create a metaphorical prompt based on dream symbols and themes
+      const analysis = typeof randomEntry.analysis === 'string'
+        ? null
+        : (randomEntry.analysis as AnalysisResponse);
+
+      let prompt = 'Создай абстрактный портрет-метафору на основе сновидения. ';
+
+      if (analysis && analysis.symbolism && analysis.symbolism.length > 0) {
+        const symbols = analysis.symbolism.slice(0, 3).map(s => s.name).join(', ');
+        prompt += `Включи символы: ${symbols}. `;
+      }
+
+      prompt += `Эмоция сна: ${randomEntry.dreamData.context.emotion}. `;
+      prompt += 'Стиль: сюрреалистический, мистический, как иллюстрация к сновидению. Без текста и надписей.';
+
+      // Generate image using visualizeDream (it uses gemini-2.0-flash-exp)
+      const mockDreamData = {
+        description: prompt,
+        context: randomEntry.dreamData.context,
+        method: randomEntry.dreamData.method
+      };
+
+      const imageDataUrl = await visualizeDream(mockDreamData);
+
+      if (!imageDataUrl) {
+        alert('Не удалось сгенерировать изображение');
+        return;
+      }
+
+      // Convert data URL to blob
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'generated-avatar.png', { type: 'image/png' });
+
+      // Delete old avatar if exists
+      if (user.avatar_url) {
+        await deleteAvatar(user.avatar_url);
+      }
+
+      // Upload new avatar
+      const { url, error } = await uploadAvatar(file, user.id);
+      if (error) {
+        alert(error.message);
+      } else if (url) {
+        await updateUserMetadata({ avatar_url: url });
+        const updatedUser = await getCurrentUser();
+        if (updatedUser) {
+          onUserUpdate(updatedUser);
+        }
+        alert('Аватар успешно сгенерирован на основе ваших снов! ✨');
+      }
+    } catch (error) {
+      console.error('Avatar generation error:', error);
+      alert('Ошибка при генерации аватара');
+    } finally {
+      setGeneratingAvatar(false);
     }
   };
 
@@ -312,16 +528,30 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                     <div className="absolute -bottom-1 -right-1 flex gap-1">
                       <button
                         onClick={handleAvatarClick}
-                        disabled={uploadingAvatar || deletingAvatar}
+                        disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
                         className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
                         title="Загрузить аватар"
                       >
                         <Camera size={14} />
                       </button>
+                      <button
+                        onClick={handleGenerateAvatar}
+                        disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
+                        className="p-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50"
+                        title="Сгенерировать аватар на основе снов (требуется минимум 1 сохранённый сон)"
+                      >
+                        {generatingAvatar ? (
+                          <div className="animate-spin">
+                            <Sparkles size={14} />
+                          </div>
+                        ) : (
+                          <Sparkles size={14} />
+                        )}
+                      </button>
                       {user?.avatar_url && (
                         <button
                           onClick={handleDeleteAvatar}
-                          disabled={uploadingAvatar || deletingAvatar}
+                          disabled={uploadingAvatar || deletingAvatar || generatingAvatar}
                           className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
                           title="Удалить аватар"
                         >
@@ -517,78 +747,78 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
             </TiltCard>
           </div>
 
-          {/* Preferences Section */}
-          <div>
-            <h3 className={sectionTitleStyle}>Интерфейс и Уведомления</h3>
-            <TiltCard className={`${cardStyle} space-y-6`}>
-
-               {/* Language Toggle */}
-               <div className="flex items-center justify-between pb-6 border-b border-slate-700/50">
-                  <div className="flex items-center gap-4">
-                     <div className="p-2 bg-slate-800 rounded-lg text-indigo-400">
-                        <Globe size={20} />
-                     </div>
-                     <div>
-                        <h4 className="text-slate-200 font-medium">Язык интерфейса</h4>
-                        <p className="text-sm text-slate-500">Текущий: Русский</p>
-                     </div>
-                  </div>
-                  <button onClick={() => setEnglishMode(!englishMode)} className={`w-12 h-6 rounded-full relative transition-colors ${englishMode ? 'bg-indigo-600' : 'bg-slate-700'}`}>
-                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${englishMode ? 'left-7' : 'left-1'}`}></div>
-                  </button>
-               </div>
-
-               {/* Notifications Toggle */}
-               <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                     <div className="bg-slate-800 rounded-lg text-amber-400 p-2">
-                        <Bell size={20} />
-                     </div>
-                     <div>
-                        <h4 className="text-slate-200 font-medium">Напоминания о записи снов</h4>
-                        <p className="text-sm text-slate-500">Утренние пуш-уведомления</p>
-                     </div>
-                  </div>
-                  <button onClick={() => setNotifications(!notifications)} className={`w-12 h-6 rounded-full relative transition-colors ${notifications ? 'bg-indigo-600' : 'bg-slate-700'}`}>
-                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${notifications ? 'left-7' : 'left-1'}`}></div>
-                  </button>
-               </div>
-            </TiltCard>
-          </div>
-
           {/* Data Management Section */}
           <div>
             <h3 className={sectionTitleStyle}>Управление данными</h3>
             <TiltCard className={cardStyle}>
                <div className="space-y-4">
+                  {/* Export JSON */}
                   <div className="flex items-center justify-between p-4 bg-slate-950/50 rounded-xl border border-slate-800">
                      <div className="flex items-center gap-3">
                         <Download size={20} className="text-emerald-400"/>
                         <div>
-                           <h4 className="text-slate-200 font-medium">Экспорт журнала</h4>
-                           <p className="text-xs text-slate-500">Скачать все записи в формате JSON</p>
+                           <h4 className="text-slate-200 font-medium">Экспорт в JSON</h4>
+                           <p className="text-xs text-slate-500">Скачать все записи для backup</p>
                         </div>
                      </div>
                      <Button variant="secondary" onClick={handleExportData} isLoading={loadingExport} className="text-sm py-2">
-                        Скачать
+                        JSON
                      </Button>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-red-950/10 rounded-xl border border-red-900/30">
+                  {/* Export TXT */}
+                  <div className="flex items-center justify-between p-4 bg-slate-950/50 rounded-xl border border-slate-800">
                      <div className="flex items-center gap-3">
-                        <Trash2 size={20} className="text-red-400"/>
+                        <FileText size={20} className="text-blue-400"/>
                         <div>
-                           <h4 className="text-red-200 font-medium">Стереть все данные</h4>
-                           <p className="text-xs text-red-400/60">Необратимое действие. Удалит локальное хранилище.</p>
+                           <h4 className="text-slate-200 font-medium">Экспорт в TXT</h4>
+                           <p className="text-xs text-slate-500">Читаемый текстовый формат</p>
                         </div>
                      </div>
-                     <button
-                        onClick={handleClearData}
-                        className="px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 text-sm font-medium transition-colors"
-                     >
-                        Удалить
-                     </button>
+                     <Button variant="secondary" onClick={handleExportTxt} isLoading={loadingExportTxt} className="text-sm py-2">
+                        TXT
+                     </Button>
                   </div>
+
+                  {/* Clear All Data */}
+                  <div className="flex items-center justify-between p-4 bg-orange-950/10 rounded-xl border border-orange-900/30">
+                     <div className="flex items-center gap-3">
+                        <Trash2 size={20} className="text-orange-400"/>
+                        <div>
+                           <h4 className="text-orange-200 font-medium">Стереть все данные</h4>
+                           <p className="text-xs text-orange-400/60">Удалит все записи и статистику из Supabase</p>
+                        </div>
+                     </div>
+                     <Button
+                        variant="secondary"
+                        onClick={handleClearData}
+                        isLoading={clearingData}
+                        className="text-sm py-2 border-orange-500/30 text-orange-400 hover:bg-orange-900/20"
+                     >
+                        Очистить
+                     </Button>
+                  </div>
+
+                  {/* Delete Account */}
+                  {user && (
+                    <div className="flex items-center justify-between p-4 bg-red-950/10 rounded-xl border border-red-900/30">
+                       <div className="flex items-center gap-3">
+                          <UserX size={20} className="text-red-400"/>
+                          <div>
+                             <h4 className="text-red-200 font-medium">Удалить аккаунт</h4>
+                             <p className="text-xs text-red-400/60">Необратимое удаление аккаунта и всех данных</p>
+                          </div>
+                       </div>
+                       <Button
+                          variant="secondary"
+                          onClick={handleDeleteAccount}
+                          isLoading={deletingAccount}
+                          className="text-sm py-2 border-red-500/30 text-red-400 hover:bg-red-900/20"
+                       >
+                          Удалить
+                       </Button>
+                    </div>
+                  )}
                </div>
             </TiltCard>
           </div>

@@ -264,3 +264,53 @@ export const migrateLocalEntriesToSupabase = async (): Promise<number> => {
     return 0;
   }
 };
+
+/**
+ * Delete ALL user data from Supabase (journal entries and analysis metadata)
+ * WARNING: This is irreversible!
+ */
+export const deleteAllUserData = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    // If no Supabase, just clear localStorage
+    localStorage.clear();
+    return true;
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return false;
+    }
+
+    // Delete all journal entries
+    const { error: entriesError } = await supabase
+      .from(TABLE_NAME)
+      .delete()
+      .eq('user_id', user.id);
+
+    if (entriesError) {
+      console.error('Error deleting journal entries:', entriesError);
+      throw entriesError;
+    }
+
+    // Delete all analysis metadata
+    const { error: metadataError } = await supabase
+      .from('analysis_metadata')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (metadataError) {
+      console.error('Error deleting analysis metadata:', metadataError);
+      // Don't throw - metadata deletion is less critical
+    }
+
+    // Also clear localStorage
+    localStorage.clear();
+
+    return true;
+  } catch (e) {
+    console.error('Failed to delete all user data:', e);
+    return false;
+  }
+};
