@@ -373,11 +373,14 @@ ${dreamContext}
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
-        systemInstruction: "Ты — эксперт по юнгианским архетипам в снах. Анализируй глубоко и точно. Только русский язык.",
+        systemInstruction: "Ты — эксперт по юнгианским архетипам в снах. Анализируй глубоко и точно. Только русский язык. Возвращай ТОЛЬКО JSON без дополнительных размышлений.",
         responseMimeType: "application/json",
         responseSchema: schema,
         temperature: 0.3,
-        maxOutputTokens: 500,
+        maxOutputTokens: 1000, // Increased from 500 to avoid MAX_TOKENS error
+        thinkingConfig: {
+          mode: "DISABLED" // Disable internal thinking to save tokens for the actual response
+        }
       }
     });
 
