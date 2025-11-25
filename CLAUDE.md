@@ -43,7 +43,7 @@ The app uses a view-based routing system (no router library) controlled by `AppV
 - `journal` → Dream history with search/filter (protected)
 - `analytics` → Dream statistics and trends (protected)
 - `settings` → User preferences (protected)
-- `archetypes` → Placeholder for future feature (protected)
+- `archetypes` → Jungian archetype analysis and personality profiling (protected)
 
 Navigation is handled via `navigateTo(view: AppView)` function in [App.tsx](App.tsx).
 
@@ -75,6 +75,28 @@ Navigation is handled via `navigateTo(view: AppView)` function in [App.tsx](App.
 ### Image Generation
 
 Function `visualizeDream()` uses `gemini-2.0-flash-exp` model with `generateContent()` (not the restricted `imagen-3.0` API). Returns base64 data URL from `inlineData` response part.
+
+### Archetype Analysis
+
+The Archetypes page provides Jungian archetype profiling based on user's dream history:
+
+**Data Flow:**
+1. Fetches all analyzed dreams from `analysis_metadata` table (includes unsaved dreams)
+2. Falls back to `dream_entries` (journal) if metadata lacks descriptions
+3. Analyzes up to 10 most recent dreams via `analyzeArchetypes()` in geminiService
+4. Each dream is scored 0-100 for all 12 archetypes (Hero, Sage, Explorer, Rebel, Creator, Ruler, Magician, Lover, Caregiver, Jester, Everyman, Innocent)
+5. Scores are aggregated and averaged across all dreams
+6. Profile saved to localStorage as `psydream_archetype_profile_v1`
+
+**Auto-Update System:**
+- Profile marked as "stale" after each new dream analysis
+- Auto-refreshes when user visits Archetypes page with stale profile
+- Manual refresh available via "Обновить профиль" button
+- Stale flag cleared after successful refresh
+
+**Storage:**
+- Currently uses localStorage for profile persistence
+- Future: can migrate to `archetype_profiles` table in Supabase for cross-device sync
 
 ### Key Technical Patterns
 
