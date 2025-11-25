@@ -21,83 +21,115 @@ interface DashboardProps {
 }
 
 /**
+ * Get time-based greeting
+ */
+const getTimeBasedGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Доброе утро";
+  if (hour >= 12 && hour < 18) return "Добрый день";
+  if (hour >= 18 && hour < 23) return "Добрый вечер";
+  return "Доброй ночи";
+};
+
+/**
  * Generate daily insight based on user's dream patterns
  */
 const generateDailyInsight = async (entries: JournalEntry[]): Promise<string> => {
+  // Check for today's dream first
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTimestamp = today.getTime();
+
+  const todaysDream = entries.find(e => e.timestamp >= todayTimestamp);
+
+  // Case 1: No dreams at all - encourage first analysis
   if (entries.length === 0) {
-    return "Начните записывать сны, и мы сможем предоставить вам персонализированные инсайты о вашем подсознании.";
+    return "Сделайте анализ своего первого сна, чтобы получить персональный инсайт о вашем подсознании! 🌙";
   }
 
+  // Case 2: Dream recorded today - analyze it
+  if (todaysDream) {
+    const insights: string[] = [];
+    const analysis = typeof todaysDream.analysis === 'string'
+      ? null
+      : todaysDream.analysis;
+
+    // Analyze today's symbols
+    if (analysis && analysis.symbolism && analysis.symbolism.length > 0) {
+      const topSymbol = analysis.symbolism[0];
+      insights.push(`Сегодняшний сон содержит символ "${topSymbol.name}". ${topSymbol.meaning.split('.')[0]}.`);
+    }
+
+    // Analyze today's emotion
+    if (todaysDream.dreamData.context?.emotion) {
+      const emotion = todaysDream.dreamData.context.emotion;
+      if (emotion === 'тревога' || emotion.includes('трево')) {
+        insights.push("Сегодняшний сон отражает тревогу. Обратите внимание на источники стресса в вашей жизни.");
+      } else if (emotion === 'радость' || emotion.includes('радо')) {
+        insights.push("Ваш сегодняшний сон наполнен радостью! Это знак внутренней гармонии.");
+      } else if (emotion.includes('страх')) {
+        insights.push("Страх в сегодняшнем сне может указывать на что-то, что требует вашего внимания.");
+      } else {
+        insights.push(`Эмоциональный фон сегодняшнего сна: ${emotion}. Это важный сигнал от подсознания.`);
+      }
+    }
+
+    // Recurring dream check
+    if (todaysDream.dreamData.context?.isRecurring) {
+      insights.push("Это повторяющийся сон! Подсознание настойчиво пытается донести важное послание.");
+    }
+
+    if (insights.length > 0) {
+      return insights[Math.floor(Math.random() * insights.length)];
+    }
+
+    return "Сегодняшний сон записан! Продолжайте наблюдать за паттернами — каждый сон раскрывает новые грани подсознания.";
+  }
+
+  // Case 3: No dream today, but has past dreams - motivate to record today
   const insights: string[] = [];
 
-  // Analyze recent symbols - use Supabase if available
+  // Analyze past patterns to motivate recording today
   const symbolFrequency = isSupabaseConfigured()
     ? await getSupabaseSymbolFrequency()
     : getSymbolFrequency();
   const topSymbols = Object.entries(symbolFrequency)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 3);
+    .slice(0, 1);
 
   if (topSymbols.length > 0) {
-    const [topSymbol, count] = topSymbols[0];
-    if (count >= 3) {
-      insights.push(`Символ "${topSymbol}" появляется в ваших снах ${count} раз. Это может указывать на важную тему в вашей жизни.`);
-    }
+    const [topSymbol] = topSymbols[0];
+    insights.push(`Запишите сегодняшний сон! В ваших прошлых снах часто встречается символ "${topSymbol}" — возможно, он появится снова.`);
   }
 
-  // Analyze recent emotions - use Supabase if available
+  // Check recent frequency
+  const lastWeek = entries.filter(e => e.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000);
+  if (lastWeek.length >= 4) {
+    insights.push("Вы активно ведёте дневник! Запишите сегодняшний сон, чтобы получить свежий инсайт и продолжить серию.");
+  } else if (lastWeek.length === 0 && entries.length > 0) {
+    insights.push("Вы давно не записывали сны. Запишите сегодняшний сон, чтобы получить новый инсайт о вашем подсознании!");
+  }
+
+  // Analyze past emotions to motivate
   const emotionHistory = isSupabaseConfigured()
     ? await getSupabaseEmotionHistory()
     : getEmotionHistory();
   if (emotionHistory.length >= 3) {
-    const recentEmotions = emotionHistory.slice(-5);
-    const emotionCounts: { [key: string]: number } = {};
-    recentEmotions.forEach(e => {
-      emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1;
-    });
-    const dominantEmotion = Object.entries(emotionCounts).sort(([, a], [, b]) => b - a)[0];
-    if (dominantEmotion && dominantEmotion[1] >= 2) {
-      const [emotion] = dominantEmotion;
-      if (emotion === 'anxiety' || emotion === 'тревога') {
-        insights.push("В последних снах преобладает тревога. Возможно, стоит уделить внимание техникам релаксации перед сном.");
-      } else if (emotion === 'joy' || emotion === 'радость') {
-        insights.push("Ваши последние сны наполнены позитивными эмоциями. Это отражение гармоничного состояния.");
-      } else if (emotion === 'fear' || emotion === 'страх') {
-        insights.push("Страх в снах может указывать на внутренние барьеры, которые готовы быть преодолёнными.");
-      }
-    }
+    insights.push("Запишите сегодняшний сон для нового инсайта! Ваш эмоциональный паттерн в снах раскрывает важные темы.");
   }
 
-  // Analyze dream frequency
-  if (entries.length >= 7) {
-    const lastWeek = entries.filter(e => e.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000);
-    if (lastWeek.length >= 5) {
-      insights.push("Вы активно ведёте дневник снов! Регулярная практика усиливает осознанность сновидений.");
-    }
-  }
-
-  // Analyze recurring patterns
+  // Recurring pattern motivation
   const recurringCount = entries.filter(e => e.dreamData.context?.isRecurring).length;
   if (recurringCount >= 2) {
-    insights.push(`У вас ${recurringCount} повторяющихся снов. Они часто несут важные послания от подсознания.`);
+    insights.push(`У вас ${recurringCount} повторяющихся снов. Запишите сегодняшний сон — возможно, один из них вернулся!`);
   }
 
-  // Analyze method diversity - use Supabase if available
-  const stats = isSupabaseConfigured() ? await getSupabaseStats() : getUserStats();
-  const methodCount = Object.keys(stats.methodUsage || {}).length;
-  if (methodCount >= 4) {
-    insights.push("Вы исследуете сны через разные психологические методы. Это даёт более полное понимание.");
-  } else if (methodCount === 1) {
-    insights.push("Попробуйте разные методы анализа! Каждый подход раскрывает уникальные аспекты снов.");
+  // Default motivation
+  if (insights.length === 0) {
+    insights.push("Запишите сегодняшний сон, чтобы получить свежий инсайт! Каждый новый сон углубляет понимание себя.");
   }
 
-  // Return random insight or default
-  if (insights.length > 0) {
-    const randomIndex = Math.floor(Math.random() * insights.length);
-    return insights[randomIndex];
-  }
-
-  return "Продолжайте записывать сны — каждая запись приближает вас к пониманию языка подсознания.";
+  return insights[Math.floor(Math.random() * insights.length)];
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
@@ -143,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
                  <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Подсознание активно</span>
                </div>
                <h2 className="text-3xl md:text-4xl font-serif font-bold text-white mb-2 leading-tight">
-                 Добрый вечер{user ? `, ${user.email.split('@')[0]}` : ''}!
+                 {getTimeBasedGreeting()}{user ? `, ${user.name || user.email.split('@')[0]}` : ''}!
                </h2>
                <p className="text-indigo-100/80 text-lg max-w-xl mb-4">
                  {entries.length > 0
