@@ -334,11 +334,15 @@ export interface ArchetypeProfile {
  * Save archetype profile to localStorage (fallback) or user metadata
  */
 export const saveArchetypeProfile = async (profile: ArchetypeProfile): Promise<boolean> => {
+  console.log('💾 Saving archetype profile:', profile);
+
   // Always save to localStorage as fallback
   try {
     localStorage.setItem(ARCHETYPE_PROFILE_KEY, JSON.stringify(profile));
+    console.log('✅ Successfully saved archetype profile to localStorage');
   } catch (e) {
-    console.error('Failed to save archetype profile to localStorage:', e);
+    console.error('❌ Failed to save archetype profile to localStorage:', e);
+    return false;
   }
 
   // If Supabase is configured, also save to user metadata (for future use)
@@ -355,14 +359,20 @@ export const saveArchetypeProfile = async (profile: ArchetypeProfile): Promise<b
  * Load archetype profile from localStorage or Supabase
  */
 export const loadArchetypeProfile = async (): Promise<ArchetypeProfile | null> => {
+  console.log('📂 Loading archetype profile from localStorage...');
+
   // Try localStorage first
   try {
     const stored = localStorage.getItem(ARCHETYPE_PROFILE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const profile = JSON.parse(stored);
+      console.log('✅ Successfully loaded archetype profile:', profile);
+      return profile;
+    } else {
+      console.log('⚠️ No saved archetype profile found');
     }
   } catch (e) {
-    console.error('Failed to load archetype profile from localStorage:', e);
+    console.error('❌ Failed to load archetype profile from localStorage:', e);
   }
 
   // In future, we could load from Supabase here
