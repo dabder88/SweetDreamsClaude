@@ -35,15 +35,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) =>
       <div className="p-8 flex flex-col items-center border-b border-white/5">
         <div className="w-24 h-24 rounded-full p-1 border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-4 relative group cursor-pointer">
            <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden relative">
-              <User size={40} className="text-indigo-300" />
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={40} className="text-indigo-300" />
+              )}
               <div className="absolute inset-0 bg-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
            </div>
            <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 border-4 border-slate-900 rounded-full" title="Онлайн"></div>
         </div>
         {user ? (
           <>
-            <h3 className="text-white font-serif font-bold text-xl tracking-wide truncate w-full text-center" title={user.email}>
-              {user.email.split('@')[0]}
+            <h3 className="text-white font-serif font-bold text-xl tracking-wide truncate w-full text-center" title={user.name || user.email}>
+              {user.name || user.email.split('@')[0]}
             </h3>
             <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1">Искатель смыслов</span>
           </>
