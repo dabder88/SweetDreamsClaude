@@ -154,10 +154,13 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {topArchetypes.map((item, index) => (
-                <TiltCard
+                <div
                   key={item.archetype.id}
-                  className="bg-slate-950/50 border border-white/10 backdrop-blur-sm p-6 cursor-pointer hover:border-indigo-500/50 transition-all"
-                  onClick={() => setSelectedArchetype(item.archetype)}
+                  className="bg-slate-950/50 border border-white/10 backdrop-blur-sm p-6 cursor-pointer hover:border-indigo-500/50 transition-all rounded-2xl"
+                  onClick={() => {
+                    console.log('Clicked top archetype:', item.archetype.name);
+                    setSelectedArchetype(item.archetype);
+                  }}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div
@@ -181,7 +184,7 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
                     <span>Подробнее</span>
                     <ChevronRight size={16} />
                   </div>
-                </TiltCard>
+                </div>
               ))}
             </div>
           </div>
@@ -226,10 +229,13 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ARCHETYPES.map((archetype) => (
-            <TiltCard
+            <div
               key={archetype.id}
-              className="bg-slate-950/50 border border-white/10 backdrop-blur-sm p-6 cursor-pointer hover:border-indigo-500/50 transition-all"
-              onClick={() => setSelectedArchetype(archetype)}
+              className="bg-slate-950/50 border border-white/10 backdrop-blur-sm p-6 cursor-pointer hover:border-indigo-500/50 transition-all rounded-2xl"
+              onClick={() => {
+                console.log('Clicked archetype:', archetype.name);
+                setSelectedArchetype(archetype);
+              }}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div
@@ -247,7 +253,7 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
                 <span>Изучить архетип</span>
                 <ChevronRight size={16} />
               </div>
-            </TiltCard>
+            </div>
           ))}
         </div>
       </div>
