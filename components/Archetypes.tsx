@@ -49,6 +49,22 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
       const dreamsWithDescriptions = metadata.filter(m => m.dream_description && m.dream_description.length > 0);
       console.log('📝 Metadata with descriptions:', dreamsWithDescriptions.length);
 
+      // Initialize aggregated scores
+      const aggregatedScores: ArchetypeScores = {
+        hero: 0,
+        sage: 0,
+        explorer: 0,
+        rebel: 0,
+        creator: 0,
+        ruler: 0,
+        magician: 0,
+        lover: 0,
+        caregiver: 0,
+        jester: 0,
+        everyman: 0,
+        innocent: 0
+      };
+
       // Fallback: if no metadata with descriptions, try using journal entries
       if (dreamsWithDescriptions.length === 0) {
         console.warn('⚠️ No dreams with descriptions in metadata. Trying journal fallback...');
@@ -112,22 +128,6 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         setLoading(false);
         return;
       }
-
-      // Aggregate archetype scores from all dreams
-      const aggregatedScores: ArchetypeScores = {
-        hero: 0,
-        sage: 0,
-        explorer: 0,
-        rebel: 0,
-        creator: 0,
-        ruler: 0,
-        magician: 0,
-        lover: 0,
-        caregiver: 0,
-        jester: 0,
-        everyman: 0,
-        innocent: 0
-      };
 
       // Analyze up to 10 most recent dreams to avoid rate limits
       const recentDreams = dreamsWithDescriptions.slice(0, 10);
