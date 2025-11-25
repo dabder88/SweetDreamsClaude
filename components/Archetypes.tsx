@@ -145,15 +145,18 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         const dreamDescription = dream.dream_description!;
         const dreamContext = `Эмоция: ${dream.emotion}, Жизненная ситуация: ${dream.life_situation || 'не указано'}`;
 
+        console.log('🔵 [Archetypes] Analyzing dream:', { dreamDescription, dreamContext });
+
         try {
           const scores = await analyzeArchetypes(dreamDescription, dreamContext);
+          console.log('✅ [Archetypes] Received scores:', scores);
 
           // Accumulate scores
           Object.keys(scores).forEach((key) => {
             aggregatedScores[key as keyof ArchetypeScores] += scores[key as keyof ArchetypeScores];
           });
         } catch (err) {
-          console.error('Failed to analyze dream', err);
+          console.error('❌ [Archetypes] Failed to analyze dream:', err);
         }
       }
 

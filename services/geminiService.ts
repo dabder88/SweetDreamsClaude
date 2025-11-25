@@ -381,7 +381,9 @@ ${dreamContext}
       }
     });
 
+    console.log('🔵 [ArchetypeAnalysis] Raw API response:', response.text);
     const result = cleanAndParseJSON(response.text) as ArchetypeScores;
+    console.log('✅ [ArchetypeAnalysis] Parsed scores:', result);
     return result;
   } catch (error) {
     console.error("Archetype analysis failed", error);
