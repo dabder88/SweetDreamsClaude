@@ -314,3 +314,57 @@ export const deleteAllUserData = async (): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * ==========================================
+ * ARCHETYPE PROFILE STORAGE
+ * ==========================================
+ */
+
+const ARCHETYPE_PROFILE_KEY = 'psydream_archetype_profile_v1';
+
+export interface ArchetypeProfile {
+  scores: any; // ArchetypeScores from geminiService
+  topArchetypes: { archetype: any; score: number }[];
+  lastAnalyzed: number;
+  analyzedDreamsCount: number;
+}
+
+/**
+ * Save archetype profile to localStorage (fallback) or user metadata
+ */
+export const saveArchetypeProfile = async (profile: ArchetypeProfile): Promise<boolean> => {
+  // Always save to localStorage as fallback
+  try {
+    localStorage.setItem(ARCHETYPE_PROFILE_KEY, JSON.stringify(profile));
+  } catch (e) {
+    console.error('Failed to save archetype profile to localStorage:', e);
+  }
+
+  // If Supabase is configured, also save to user metadata (for future use)
+  if (!isSupabaseConfigured()) {
+    return true;
+  }
+
+  // For now, we're only using localStorage
+  // In future, we could save to a separate 'archetype_profiles' table in Supabase
+  return true;
+};
+
+/**
+ * Load archetype profile from localStorage or Supabase
+ */
+export const loadArchetypeProfile = async (): Promise<ArchetypeProfile | null> => {
+  // Try localStorage first
+  try {
+    const stored = localStorage.getItem(ARCHETYPE_PROFILE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load archetype profile from localStorage:', e);
+  }
+
+  // In future, we could load from Supabase here
+  return null;
+};

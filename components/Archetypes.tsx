@@ -4,7 +4,12 @@ import Button from './Button';
 import { User as UserType, JournalEntry, AnalysisResponse } from '../types';
 import { ARCHETYPES, Archetype, getArchetypeById } from '../constants/archetypes';
 import { analyzeArchetypes, ArchetypeScores } from '../services/geminiService';
-import { getJournalEntries } from '../services/supabaseStorageService';
+import {
+  getJournalEntries,
+  saveArchetypeProfile,
+  loadArchetypeProfile,
+  ArchetypeProfile
+} from '../services/supabaseStorageService';
 import {
   Sparkles, TrendingUp, Book, X, ChevronRight, Loader2
 } from 'lucide-react';
@@ -18,6 +23,18 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
   const [archetypeScores, setArchetypeScores] = useState<ArchetypeScores | null>(null);
   const [selectedArchetype, setSelectedArchetype] = useState<Archetype | null>(null);
   const [topArchetypes, setTopArchetypes] = useState<{ archetype: Archetype; score: number }[]>([]);
+
+  // Load saved archetype profile on mount
+  useEffect(() => {
+    const loadSavedProfile = async () => {
+      const savedProfile = await loadArchetypeProfile();
+      if (savedProfile) {
+        setArchetypeScores(savedProfile.scores);
+        setTopArchetypes(savedProfile.topArchetypes);
+      }
+    };
+    loadSavedProfile();
+  }, []);
 
   // Analyze user's dream journal for archetypes
   const analyzeUserArchetypes = async () => {
@@ -85,6 +102,15 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
         .slice(0, 3);
 
       setTopArchetypes(sortedArchetypes);
+
+      // Save profile to storage
+      const profile: ArchetypeProfile = {
+        scores: aggregatedScores,
+        topArchetypes: sortedArchetypes,
+        lastAnalyzed: Date.now(),
+        analyzedDreamsCount: dreamCount
+      };
+      await saveArchetypeProfile(profile);
 
     } catch (error) {
       console.error('Analysis error:', error);
