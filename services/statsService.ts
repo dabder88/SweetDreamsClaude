@@ -1,9 +1,12 @@
 /**
  * Service for tracking user dream analysis statistics
  * Tracks total analyzed dreams separately from saved journal entries
+ * Now syncs with Supabase for cross-device statistics
  */
 
 import { PsychMethod } from '../types';
+import { getAnalysisMetadata } from './analysisMetadataService';
+import { isSupabaseConfigured } from './supabaseClient';
 
 const STATS_KEY = 'psydream_stats_v1';
 
@@ -223,4 +226,92 @@ export const isAchievementUnlocked = (achievementId: string): boolean => {
 export const getUnlockedAchievements = (): string[] => {
   const stats = getUserStats();
   return stats.unlockedAchievements || [];
+};
+
+/**
+ * Get statistics from Supabase metadata (cross-device sync)
+ * Falls back to localStorage if Supabase is not configured
+ */
+export const getSupabaseStats = async (): Promise<UserStats> => {
+  if (!isSupabaseConfigured()) {
+    return getUserStats(); // Fallback to localStorage
+  }
+
+  try {
+    const metadata = await getAnalysisMetadata();
+
+    // Calculate stats from metadata
+    const totalAnalyzedDreams = metadata.length;
+    const lastAnalysisTimestamp = metadata.length > 0 ? metadata[0].timestamp : undefined;
+
+    // Calculate method usage
+    const methodUsage: MethodUsageStats = {};
+    metadata.forEach(m => {
+      methodUsage[m.method] = (methodUsage[m.method] || 0) + 1;
+    });
+
+    // Get emotion history
+    const emotionHistory: EmotionRecord[] = metadata
+      .filter(m => m.emotion)
+      .map(m => ({
+        emotion: m.emotion,
+        timestamp: m.timestamp
+      }));
+
+    // Calculate symbol frequency
+    const symbolFrequency: SymbolFrequency = {};
+    metadata.forEach(m => {
+      m.symbols.forEach(symbol => {
+        symbolFrequency[symbol] = (symbolFrequency[symbol] || 0) + 1;
+      });
+    });
+
+    // Get localStorage achievements (not yet synced to Supabase)
+    const localStats = getUserStats();
+    const unlockedAchievements = localStats.unlockedAchievements || [];
+
+    return {
+      totalAnalyzedDreams,
+      lastAnalysisTimestamp,
+      methodUsage,
+      emotionHistory,
+      symbolFrequency,
+      unlockedAchievements
+    };
+  } catch (err) {
+    console.error('Failed to get Supabase stats, falling back to localStorage:', err);
+    return getUserStats();
+  }
+};
+
+/**
+ * Get method usage from Supabase
+ */
+export const getSupabaseMethodUsage = async (): Promise<MethodUsageStats> => {
+  const stats = await getSupabaseStats();
+  return stats.methodUsage || {};
+};
+
+/**
+ * Get emotion history from Supabase
+ */
+export const getSupabaseEmotionHistory = async (): Promise<EmotionRecord[]> => {
+  const stats = await getSupabaseStats();
+  return stats.emotionHistory || [];
+};
+
+/**
+ * Get symbol frequency from Supabase
+ */
+export const getSupabaseSymbolFrequency = async (): Promise<SymbolFrequency> => {
+  const stats = await getSupabaseStats();
+  return stats.symbolFrequency || {};
+};
+
+/**
+ * Get total analyzed dreams from Supabase
+ */
+export const getSupabaseTotalAnalyzedDreams = async (): Promise<number> => {
+  const stats = await getSupabaseStats();
+  return stats.totalAnalyzedDreams;
 };

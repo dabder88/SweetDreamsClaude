@@ -4,7 +4,10 @@ import ReactMarkdown from 'react-markdown';
 import { analyzeDream, visualizeDream } from '../services/geminiService';
 import { saveJournalEntry } from '../services/supabaseStorageService';
 import { incrementAnalyzedDreams, recordMethodUsage, recordEmotion, recordSymbols } from '../services/statsService';
-import { DreamData, JournalEntry, AnalysisResponse, DreamSymbol } from '../types';
+import { saveAnalysisMetadata } from '../services/analysisMetadataService';
+import { getCurrentUser } from '../services/authService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
+import { DreamData, JournalEntry, AnalysisResponse, DreamSymbol, AnalysisMetadata } from '../types';
 import { RefreshCw, Image as ImageIcon, Check, Save, Sparkles, Layers, Compass, Key, ChevronDown, AlertCircle } from 'lucide-react';
 import Button from './Button';
 import TiltCard from './TiltCard';
@@ -145,9 +148,28 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
         recordEmotion(data.context.emotion);
 
         // Record symbols for statistics
-        if (analysisData.symbolism && analysisData.symbolism.length > 0) {
-          const symbolNames = analysisData.symbolism.map(s => s.name);
+        const symbolNames = analysisData.symbolism && analysisData.symbolism.length > 0
+          ? analysisData.symbolism.map(s => s.name)
+          : [];
+        if (symbolNames.length > 0) {
           recordSymbols(symbolNames);
+        }
+
+        // Save metadata to Supabase for cross-device statistics
+        if (isSupabaseConfigured()) {
+          const currentUser = await getCurrentUser();
+          if (currentUser) {
+            const metadata: Omit<AnalysisMetadata, 'created_at'> = {
+              id: `analysis-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              user_id: currentUser.id,
+              timestamp: Date.now(),
+              method: data.method,
+              emotion: data.context.emotion,
+              recurring: data.context.recurring,
+              symbols: symbolNames,
+            };
+            await saveAnalysisMetadata(metadata);
+          }
         }
 
         // Notify parent that analysis is complete

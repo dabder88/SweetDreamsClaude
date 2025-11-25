@@ -4,7 +4,16 @@ import { Plus, Sparkles, Brain, Calendar, ArrowRight } from 'lucide-react';
 import TiltCard from './TiltCard';
 import { AppView, User, JournalEntry } from '../types';
 import { getJournalEntries } from '../services/supabaseStorageService';
-import { getTotalAnalyzedDreams, getUserStats, getSymbolFrequency, getEmotionHistory } from '../services/statsService';
+import {
+  getTotalAnalyzedDreams,
+  getUserStats,
+  getSymbolFrequency,
+  getEmotionHistory,
+  getSupabaseSymbolFrequency,
+  getSupabaseEmotionHistory,
+  getSupabaseStats
+} from '../services/statsService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -14,15 +23,17 @@ interface DashboardProps {
 /**
  * Generate daily insight based on user's dream patterns
  */
-const generateDailyInsight = (entries: JournalEntry[]): string => {
+const generateDailyInsight = async (entries: JournalEntry[]): Promise<string> => {
   if (entries.length === 0) {
     return "Начните записывать сны, и мы сможем предоставить вам персонализированные инсайты о вашем подсознании.";
   }
 
   const insights: string[] = [];
 
-  // Analyze recent symbols
-  const symbolFrequency = getSymbolFrequency();
+  // Analyze recent symbols - use Supabase if available
+  const symbolFrequency = isSupabaseConfigured()
+    ? await getSupabaseSymbolFrequency()
+    : getSymbolFrequency();
   const topSymbols = Object.entries(symbolFrequency)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
@@ -34,8 +45,10 @@ const generateDailyInsight = (entries: JournalEntry[]): string => {
     }
   }
 
-  // Analyze recent emotions
-  const emotionHistory = getEmotionHistory();
+  // Analyze recent emotions - use Supabase if available
+  const emotionHistory = isSupabaseConfigured()
+    ? await getSupabaseEmotionHistory()
+    : getEmotionHistory();
   if (emotionHistory.length >= 3) {
     const recentEmotions = emotionHistory.slice(-5);
     const emotionCounts: { [key: string]: number } = {};
@@ -69,8 +82,8 @@ const generateDailyInsight = (entries: JournalEntry[]): string => {
     insights.push(`У вас ${recurringCount} повторяющихся снов. Они часто несут важные послания от подсознания.`);
   }
 
-  // Analyze method diversity
-  const stats = getUserStats();
+  // Analyze method diversity - use Supabase if available
+  const stats = isSupabaseConfigured() ? await getSupabaseStats() : getUserStats();
   const methodCount = Object.keys(stats.methodUsage || {}).length;
   if (methodCount >= 4) {
     insights.push("Вы исследуете сны через разные психологические методы. Это даёт более полное понимание.");
@@ -103,8 +116,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, user }) => {
         const analyzed = getTotalAnalyzedDreams();
         setTotalAnalyzed(analyzed);
 
-        // Generate daily insight
-        const insight = generateDailyInsight(loadedEntries);
+        // Generate daily insight (now async)
+        const insight = await generateDailyInsight(loadedEntries);
         setDailyInsight(insight);
       } catch (error) {
         console.error('Error loading entries:', error);

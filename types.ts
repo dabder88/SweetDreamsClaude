@@ -56,4 +56,20 @@ export interface JournalEntry {
   notes?: string;
 }
 
+/**
+ * Lightweight metadata for dream analysis statistics
+ * Stored in Supabase for all analyses (even unsaved ones)
+ * Used for cross-device statistics synchronization
+ */
+export interface AnalysisMetadata {
+  id: string;
+  user_id: string;
+  timestamp: number;
+  method: PsychMethod;
+  emotion: string;
+  recurring: boolean;
+  symbols: string[]; // Array of symbol names for frequency tracking
+  created_at?: string;
+}
+
 export type AppView = 'wizard' | 'landing' | 'dashboard' | 'journal' | 'dreamView' | 'analytics' | 'archetypes' | 'settings' | 'auth';
