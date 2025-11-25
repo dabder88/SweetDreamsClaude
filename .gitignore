@@ -17,6 +17,9 @@ dist-ssr
 .env.local
 .env.production
 
+# GitHub tokens (temporary file, will be deleted after project completion)
+GITHUB_TOKENS.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
