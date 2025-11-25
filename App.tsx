@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
+import Archetypes from './components/Archetypes';
 import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
 import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles, AlertCircle, Save } from 'lucide-react';
@@ -350,16 +351,8 @@ function App() {
           {view === 'journal' && <DreamJournal onViewDream={handleViewDream} />}
           {view === 'dreamView' && selectedDream && <DreamView entry={selectedDream} onBack={handleBackToJournal} />}
           {view === 'analytics' && <Analytics />}
+          {view === 'archetypes' && <Archetypes user={user} />}
           {view === 'settings' && <Settings user={user} onUserUpdate={setUser} />}
-          
-          {/* Placeholders for future views */}
-          {view === 'archetypes' && (
-            <TiltCard className="glass-panel p-10 text-center rounded-2xl bg-slate-900/50">
-               <Ghost size={64} className="mx-auto text-slate-600 mb-4" />
-               <h2 className="text-2xl font-serif text-white mb-2">Коллекция Архетипов</h2>
-               <p className="text-slate-400">Этот раздел находится в разработке. Скоро вы сможете открывать архетипы через свои сны.</p>
-            </TiltCard>
-          )}
         </div>
 
       </main>

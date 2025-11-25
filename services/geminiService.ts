@@ -245,11 +245,11 @@ export const analyzeDream = async (data: DreamData): Promise<AnalysisResponse> =
 export const visualizeDream = async (description: string): Promise<string> => {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("API Key is missing! Check Vercel Environment Variables (VITE_API_KEY).");
-  
+
   const ai = new GoogleGenAI({ apiKey: apiKey });
 
   try {
-    const prompt = `Generate a surreal, artistic, and dreamlike digital painting: "${description}". 
+    const prompt = `Generate a surreal, artistic, and dreamlike digital painting: "${description}".
     Style: Ethereal, psychological, symbolic, soft lighting, deep atmosphere, high quality concept art, darker tones to match a midnight theme.`;
 
     // Switch to gemini-2.0-flash-exp for image generation via generateContent
@@ -267,10 +267,124 @@ export const visualizeDream = async (description: string): Promise<string> => {
         }
       }
     }
-    
+
     throw new Error("Изображение не сгенерировано (нет данных в ответе)");
   } catch (error) {
     console.error("Visualization failed", error);
+    throw error;
+  }
+};
+
+/**
+ * Analyze archetypes present in a dream
+ * Returns archetype scores (0-100) for each of the 12 Jungian archetypes
+ */
+export interface ArchetypeScores {
+  hero: number;
+  sage: number;
+  explorer: number;
+  rebel: number;
+  creator: number;
+  ruler: number;
+  magician: number;
+  lover: number;
+  caregiver: number;
+  jester: number;
+  everyman: number;
+  innocent: number;
+}
+
+export const analyzeArchetypes = async (dreamDescription: string, dreamContext: string): Promise<ArchetypeScores> => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.error("API Key missing for archetype analysis");
+    throw new Error("API Key is missing!");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+
+  const prompt = `Проанализируй сновидение и определи интенсивность присутствия каждого из 12 юнгианских архетипов.
+
+ОПИСАНИЕ СНА:
+${dreamDescription}
+
+КОНТЕКСТ:
+${dreamContext}
+
+12 ЮНГИАНСКИХ АРХЕТИПОВ:
+1. Герой (Hero) - смелость, преодоление препятствий, битвы
+2. Мудрец (Sage) - знание, поиск истины, учителя
+3. Искатель (Explorer) - путешествия, поиск нового, свобода
+4. Бунтарь (Rebel) - революция, разрушение старого, освобождение
+5. Творец (Creator) - создание, искусство, самовыражение
+6. Правитель (Ruler) - власть, контроль, лидерство
+7. Маг (Magician) - трансформация, магия, видение невидимого
+8. Любовник (Lover) - страсть, близость, красота, эмоции
+9. Заботливый (Caregiver) - забота, защита, исцеление
+10. Шут (Jester) - игра, смех, спонтанность, радость
+11. Обыватель (Everyman) - принадлежность, простота, равенство
+12. Невинный (Innocent) - чистота, оптимизм, детство, вера
+
+ЗАДАЧА:
+Оцени силу проявления каждого архетипа по шкале 0-100, где:
+- 0 = архетип полностью отсутствует
+- 25 = слабое присутствие (намёки, косвенные признаки)
+- 50 = умеренное присутствие (явные признаки)
+- 75 = сильное присутствие (доминирующая тема)
+- 100 = очень сильное присутствие (центральная тема сна)
+
+Верни ТОЛЬКО JSON в формате:
+{
+  "hero": <число 0-100>,
+  "sage": <число 0-100>,
+  "explorer": <число 0-100>,
+  "rebel": <число 0-100>,
+  "creator": <число 0-100>,
+  "ruler": <число 0-100>,
+  "magician": <число 0-100>,
+  "lover": <число 0-100>,
+  "caregiver": <число 0-100>,
+  "jester": <число 0-100>,
+  "everyman": <число 0-100>,
+  "innocent": <число 0-100>
+}`;
+
+  try {
+    const schema: Schema = {
+      type: Type.OBJECT,
+      properties: {
+        hero: { type: Type.NUMBER },
+        sage: { type: Type.NUMBER },
+        explorer: { type: Type.NUMBER },
+        rebel: { type: Type.NUMBER },
+        creator: { type: Type.NUMBER },
+        ruler: { type: Type.NUMBER },
+        magician: { type: Type.NUMBER },
+        lover: { type: Type.NUMBER },
+        caregiver: { type: Type.NUMBER },
+        jester: { type: Type.NUMBER },
+        everyman: { type: Type.NUMBER },
+        innocent: { type: Type.NUMBER }
+      },
+      required: ["hero", "sage", "explorer", "rebel", "creator", "ruler", "magician", "lover", "caregiver", "jester", "everyman", "innocent"]
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: "Ты — эксперт по юнгианским архетипам в снах. Анализируй глубоко и точно. Только русский язык.",
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        temperature: 0.3,
+        maxOutputTokens: 500,
+      }
+    });
+
+    const result = cleanAndParseJSON(response.text) as ArchetypeScores;
+    return result;
+  } catch (error) {
+    console.error("Archetype analysis failed", error);
     throw error;
   }
 };
