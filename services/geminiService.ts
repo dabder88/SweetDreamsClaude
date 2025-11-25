@@ -381,8 +381,23 @@ ${dreamContext}
       }
     });
 
-    console.log('🔵 [ArchetypeAnalysis] Raw API response:', response.text);
-    const result = cleanAndParseJSON(response.text) as ArchetypeScores;
+    console.log('🔵 [ArchetypeAnalysis] Full response object:', response);
+    console.log('🔵 [ArchetypeAnalysis] response.text:', response.text);
+    console.log('🔵 [ArchetypeAnalysis] response.candidates:', response.candidates);
+
+    // Try to get text from response
+    let responseText = '';
+    if (response.text) {
+      responseText = response.text;
+    } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+      responseText = response.candidates[0].content.parts[0].text;
+      console.log('🔵 [ArchetypeAnalysis] Extracted text from candidates:', responseText);
+    } else {
+      console.error('❌ [ArchetypeAnalysis] Cannot extract text from response');
+      throw new Error('No text in API response');
+    }
+
+    const result = cleanAndParseJSON(responseText) as ArchetypeScores;
     console.log('✅ [ArchetypeAnalysis] Parsed scores:', result);
     return result;
   } catch (error) {
