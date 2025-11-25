@@ -197,7 +197,7 @@ export const updateEmail = async (newEmail: string): Promise<{ error: AuthError 
 export const updateUserMetadata = async (metadata: {
   name?: string;
   avatar_url?: string;
-  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  gender?: 'male' | 'female';
   date_of_birth?: string;
 }): Promise<{ error: AuthError | null }> => {
   try {

@@ -352,7 +352,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
     setSavingGender(true);
     try {
       const { error } = await updateUserMetadata({
-        gender: gender as 'male' | 'female' | 'other' | 'prefer-not-to-say'
+        gender: gender as 'male' | 'female'
       });
       if (error) {
         alert(error.message);
@@ -711,8 +711,6 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                                    <option value="">Выберите пол</option>
                                    <option value="male">Мужской</option>
                                    <option value="female">Женский</option>
-                                   <option value="other">Другой</option>
-                                   <option value="prefer-not-to-say">Предпочитаю не указывать</option>
                                  </select>
                                </div>
                                <button
@@ -742,8 +740,6 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                                  <div className={`${inputStyle} pl-10 cursor-not-allowed opacity-70`}>
                                    {user?.gender === 'male' ? 'Мужской' :
                                     user?.gender === 'female' ? 'Женский' :
-                                    user?.gender === 'other' ? 'Другой' :
-                                    user?.gender === 'prefer-not-to-say' ? 'Предпочитаю не указывать' :
                                     'Не указано'}
                                  </div>
                                </div>
