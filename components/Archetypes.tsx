@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import TiltCard from './TiltCard';
 import Button from './Button';
-import { User as UserType, JournalEntry, AnalysisResponse } from '../types';
+import { User as UserType } from '../types';
 import { ARCHETYPES, Archetype, getArchetypeById } from '../constants/archetypes';
 import { analyzeArchetypes, ArchetypeScores } from '../services/geminiService';
 import {
-  getJournalEntries,
   saveArchetypeProfile,
   loadArchetypeProfile,
   ArchetypeProfile
 } from '../services/supabaseStorageService';
+import { getAnalysisMetadata } from '../services/analysisMetadataService';
 import {
   Sparkles, TrendingUp, Book, X, ChevronRight, Loader2
 } from 'lucide-react';
@@ -40,10 +40,14 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
   const analyzeUserArchetypes = async () => {
     setLoading(true);
     try {
-      const entries = await getJournalEntries();
+      // Get ALL analyzed dreams (not just saved journal entries)
+      const metadata = await getAnalysisMetadata();
 
-      if (entries.length === 0) {
-        alert('Для анализа архетипов нужен хотя бы один сохранённый сон');
+      // Filter only metadata that has dream descriptions
+      const dreamsWithDescriptions = metadata.filter(m => m.dream_description && m.dream_description.length > 0);
+
+      if (dreamsWithDescriptions.length === 0) {
+        alert('Для анализа архетипов нужен хотя бы один проанализированный сон');
         return;
       }
 
@@ -64,11 +68,11 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
       };
 
       // Analyze up to 10 most recent dreams to avoid rate limits
-      const recentEntries = entries.slice(0, 10);
+      const recentDreams = dreamsWithDescriptions.slice(0, 10);
 
-      for (const entry of recentEntries) {
-        const dreamDescription = entry.dreamData.description;
-        const dreamContext = `Эмоция: ${entry.dreamData.context.emotion}, Жизненная ситуация: ${entry.dreamData.context.lifeSituation}`;
+      for (const dream of recentDreams) {
+        const dreamDescription = dream.dream_description!;
+        const dreamContext = `Эмоция: ${dream.emotion}, Жизненная ситуация: ${dream.life_situation || 'не указано'}`;
 
         try {
           const scores = await analyzeArchetypes(dreamDescription, dreamContext);
@@ -83,7 +87,7 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
       }
 
       // Average the scores
-      const dreamCount = recentEntries.length;
+      const dreamCount = recentDreams.length;
       Object.keys(aggregatedScores).forEach((key) => {
         aggregatedScores[key as keyof ArchetypeScores] = Math.round(
           aggregatedScores[key as keyof ArchetypeScores] / dreamCount

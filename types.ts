@@ -71,6 +71,8 @@ export interface AnalysisMetadata {
   emotion: string;
   recurring: boolean;
   symbols: string[]; // Array of symbol names for frequency tracking
+  dream_description?: string; // Brief description of the dream for archetype analysis
+  life_situation?: string; // Life context for better analysis
   created_at?: string;
 }
 

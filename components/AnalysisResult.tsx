@@ -167,6 +167,8 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
               emotion: data.context.emotion,
               recurring: data.context.recurring,
               symbols: symbolNames,
+              dream_description: data.description, // Save for archetype analysis
+              life_situation: data.context.lifeSituation, // Save for context
             };
             await saveAnalysisMetadata(metadata);
           }

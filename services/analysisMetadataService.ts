@@ -18,6 +18,8 @@ export const saveAnalysisMetadata = async (metadata: Omit<AnalysisMetadata, 'cre
         emotion: metadata.emotion,
         recurring: metadata.recurring,
         symbols: metadata.symbols,
+        dream_description: metadata.dream_description,
+        life_situation: metadata.life_situation,
       });
 
     if (error) {

@@ -101,10 +101,19 @@ USING (
 );
 
 -- =====================================================
+-- MIGRATION: Add dream_description and life_situation to analysis_metadata
+-- =====================================================
+-- Run this if you already have the analysis_metadata table
+ALTER TABLE analysis_metadata
+ADD COLUMN IF NOT EXISTS dream_description TEXT,
+ADD COLUMN IF NOT EXISTS life_situation TEXT;
+
+-- =====================================================
 -- Setup Complete!
 -- =====================================================
 -- After running this script:
 -- 1. Your analysis_metadata table is ready for cross-device stats
 -- 2. User avatars can be uploaded to the user-data bucket
 -- 3. All data is protected by Row Level Security
+-- 4. Dream descriptions are stored in metadata for archetype analysis
 -- =====================================================
