@@ -7,7 +7,8 @@ import { analyzeArchetypes, ArchetypeScores } from '../services/geminiService';
 import {
   saveArchetypeProfile,
   loadArchetypeProfile,
-  ArchetypeProfile
+  ArchetypeProfile,
+  getJournalEntries
 } from '../services/supabaseStorageService';
 import { getAnalysisMetadata } from '../services/analysisMetadataService';
 import {
@@ -42,12 +43,73 @@ const Archetypes: React.FC<ArchetypesProps> = ({ user }) => {
     try {
       // Get ALL analyzed dreams (not just saved journal entries)
       const metadata = await getAnalysisMetadata();
+      console.log('📊 Total metadata entries:', metadata.length);
 
       // Filter only metadata that has dream descriptions
       const dreamsWithDescriptions = metadata.filter(m => m.dream_description && m.dream_description.length > 0);
+      console.log('📝 Metadata with descriptions:', dreamsWithDescriptions.length);
 
+      // Fallback: if no metadata with descriptions, try using journal entries
       if (dreamsWithDescriptions.length === 0) {
-        alert('Для анализа архетипов нужен хотя бы один проанализированный сон');
+        console.warn('⚠️ No dreams with descriptions in metadata. Trying journal fallback...');
+        const journalEntries = await getJournalEntries();
+        console.log('📔 Journal entries found:', journalEntries.length);
+
+        if (journalEntries.length === 0) {
+          alert('Для анализа архетипов нужен хотя бы один сохранённый сон в журнале или новое толкование.');
+          return;
+        }
+
+        // Use journal entries instead
+        const recentJournalEntries = journalEntries.slice(0, 10);
+
+        for (const entry of recentJournalEntries) {
+          const dreamDescription = entry.dreamData.description;
+          const dreamContext = `Эмоция: ${entry.dreamData.context.emotion}, Жизненная ситуация: ${entry.dreamData.context.lifeSituation}`;
+
+          try {
+            const scores = await analyzeArchetypes(dreamDescription, dreamContext);
+
+            // Accumulate scores
+            Object.keys(scores).forEach((key) => {
+              aggregatedScores[key as keyof ArchetypeScores] += scores[key as keyof ArchetypeScores];
+            });
+          } catch (err) {
+            console.error('Failed to analyze dream', err);
+          }
+        }
+
+        // Average the scores
+        const dreamCount = recentJournalEntries.length;
+        Object.keys(aggregatedScores).forEach((key) => {
+          aggregatedScores[key as keyof ArchetypeScores] = Math.round(
+            aggregatedScores[key as keyof ArchetypeScores] / dreamCount
+          );
+        });
+
+        setArchetypeScores(aggregatedScores);
+
+        // Calculate top 3 archetypes
+        const sortedArchetypes = Object.entries(aggregatedScores)
+          .map(([id, score]) => ({
+            archetype: getArchetypeById(id)!,
+            score
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+
+        setTopArchetypes(sortedArchetypes);
+
+        // Save profile to storage
+        const profile: ArchetypeProfile = {
+          scores: aggregatedScores,
+          topArchetypes: sortedArchetypes,
+          lastAnalyzed: Date.now(),
+          analyzedDreamsCount: dreamCount
+        };
+        await saveArchetypeProfile(profile);
+
+        setLoading(false);
         return;
       }
 
