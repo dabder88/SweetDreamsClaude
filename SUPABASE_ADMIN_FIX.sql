@@ -63,6 +63,10 @@ CREATE POLICY "Admins can delete balances"
 -- =====================================================
 -- These functions allow admins to access auth.users data safely
 
+-- Drop existing functions first (required when changing return type)
+DROP FUNCTION IF EXISTS get_all_users();
+DROP FUNCTION IF EXISTS get_user_by_id(UUID);
+
 -- Function to get all users (admin only)
 CREATE OR REPLACE FUNCTION get_all_users()
 RETURNS TABLE (
