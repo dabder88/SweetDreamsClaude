@@ -10,6 +10,10 @@ import {
   UsageMetric
 } from '../types';
 
+// Re-export types that are commonly used
+export { TransactionType, TransactionStatus };
+export type { Transaction };
+
 // =====================================================
 // FILTER TYPES
 // =====================================================
@@ -639,6 +643,30 @@ export const getTransactions = async (filters?: TransactionFilters): Promise<Tra
     return data as Transaction[] || [];
   } catch (err) {
     console.error('Error in getTransactions:', err);
+    return [];
+  }
+};
+
+/**
+ * Get transactions for a specific user
+ */
+export const getUserTransactions = async (userId: string, limit = 10): Promise<Transaction[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching user transactions:', error);
+      return [];
+    }
+
+    return data as Transaction[] || [];
+  } catch (err) {
+    console.error('Error in getUserTransactions:', err);
     return [];
   }
 };
