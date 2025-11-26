@@ -163,8 +163,16 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
           <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6 space-y-6">
             {/* Avatar and Name */}
             <div className="text-center">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
-                {(user.name || user.email)[0].toUpperCase()}
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4 overflow-hidden">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name || user.email}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (user.name || user.email)[0].toUpperCase()
+                )}
               </div>
               <h3 className="text-xl font-bold text-white mb-1">{user.name || 'Без имени'}</h3>
               <p className="text-slate-400 text-sm">{user.email}</p>

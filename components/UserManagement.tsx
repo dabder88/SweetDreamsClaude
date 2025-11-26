@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   Search,
@@ -13,7 +13,10 @@ import {
   Calendar,
   Mail,
   CreditCard,
-  ArrowLeft
+  ArrowLeft,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { getAllUsers, getUserBalance, type UserFilters } from '../services/adminService';
 import type { User } from '../types';
@@ -28,6 +31,9 @@ interface UserManagementProps {
   onBack?: () => void; // Optional back button callback
 }
 
+type SortField = 'name' | 'email' | 'role' | 'balance' | 'created_at';
+type SortDirection = 'asc' | 'desc' | null;
+
 const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) => {
   const [users, setUsers] = useState<UserWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +46,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     limit: 20,
     offset: 0
   });
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
 
   const usersPerPage = 20;
 
@@ -93,6 +102,94 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     loadUsers();
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const handleColumnFilter = (column: string, value: string) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [column]: value
+    }));
+    setCurrentPage(1);
+  };
+
+  // Filtered and sorted users
+  const processedUsers = useMemo(() => {
+    let result = [...users];
+
+    // Apply column filters
+    Object.entries(columnFilters).forEach(([column, filterValue]) => {
+      if (!filterValue) return;
+
+      const lowerFilter = filterValue.toLowerCase();
+      result = result.filter(user => {
+        switch (column) {
+          case 'name':
+            return (user.name || user.email).toLowerCase().includes(lowerFilter);
+          case 'email':
+            return user.email.toLowerCase().includes(lowerFilter);
+          case 'role':
+            return (user.role || 'user').toLowerCase().includes(lowerFilter);
+          case 'balance':
+            return (user.balance?.toString() || '0').includes(filterValue);
+          default:
+            return true;
+        }
+      });
+    });
+
+    // Apply sorting
+    if (sortField && sortDirection) {
+      result.sort((a, b) => {
+        let aVal: any;
+        let bVal: any;
+
+        switch (sortField) {
+          case 'name':
+            aVal = (a.name || a.email).toLowerCase();
+            bVal = (b.name || b.email).toLowerCase();
+            break;
+          case 'email':
+            aVal = a.email.toLowerCase();
+            bVal = b.email.toLowerCase();
+            break;
+          case 'role':
+            aVal = a.role || 'user';
+            bVal = b.role || 'user';
+            break;
+          case 'balance':
+            aVal = a.balance || 0;
+            bVal = b.balance || 0;
+            break;
+          case 'created_at':
+            aVal = new Date(a.created_at).getTime();
+            bVal = new Date(b.created_at).getTime();
+            break;
+          default:
+            return 0;
+        }
+
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [users, columnFilters, sortField, sortDirection]);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ru-RU', {
       day: '2-digit',
@@ -111,6 +208,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
   const getRoleLabel = (role?: 'user' | 'admin') => {
     return role === 'admin' ? 'Администратор' : 'Пользователь';
   };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown size={14} className="text-slate-500" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp size={14} className="text-blue-400" />;
+    }
+    return <ArrowDown size={14} className="text-blue-400" />;
+  };
+
+  const SortableHeader: React.FC<{ field: SortField; label: string; showFilter?: boolean }> = ({
+    field,
+    label,
+    showFilter = false
+  }) => (
+    <th className="px-6 py-4 text-left">
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => handleSort(field)}
+          className="flex items-center gap-2 text-sm font-semibold text-slate-400 uppercase tracking-wider hover:text-blue-400 transition-colors"
+        >
+          {label}
+          {getSortIcon(field)}
+        </button>
+        {showFilter && (
+          <input
+            type="text"
+            value={columnFilters[field] || ''}
+            onChange={(e) => handleColumnFilter(field, e.target.value)}
+            placeholder={`Фильтр...`}
+            className="w-full px-2 py-1 text-xs bg-slate-900/50 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+          />
+        )}
+      </div>
+    </th>
+  );
 
   return (
     <div className="space-y-6">
@@ -228,33 +363,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700/50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Пользователь
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Роль
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Баланс
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Регистрация
-                  </th>
+                  <SortableHeader field="name" label="Пользователь" showFilter />
+                  <SortableHeader field="email" label="Email" showFilter />
+                  <SortableHeader field="role" label="Роль" showFilter />
+                  <SortableHeader field="balance" label="Баланс" showFilter />
+                  <SortableHeader field="created_at" label="Регистрация" />
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
                     Действия
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {users.map((user) => (
+                {processedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-semibold">
-                          {(user.name || user.email)[0].toUpperCase()}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-semibold overflow-hidden">
+                          {user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt={user.name || user.email}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            (user.name || user.email)[0].toUpperCase()
+                          )}
                         </div>
                         <div>
                           <div className="text-white font-medium">{user.name || 'Без имени'}</div>
@@ -301,11 +434,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
           </div>
 
           {/* Empty State */}
-          {users.length === 0 && (
+          {processedUsers.length === 0 && (
             <div className="p-12 text-center">
               <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <p className="text-slate-400 text-lg">Пользователи не найдены</p>
-              <p className="text-slate-500 text-sm mt-2">Попробуйте изменить параметры поиска</p>
+              <p className="text-slate-500 text-sm mt-2">Попробуйте изменить параметры поиска или фильтры</p>
             </div>
           )}
 
