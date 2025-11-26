@@ -1,11 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText } from 'lucide-react';
+import UserManagement from './UserManagement';
+import UserDetail from './UserDetail';
+import type { User } from '../types';
 
 interface AdminPanelProps {
   onNavigate: (view: string) => void;
 }
 
+interface UserWithBalance extends User {
+  balance?: number;
+  dreamCount?: number;
+}
+
+type AdminView = 'overview' | 'users' | 'user-detail';
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
+  const [currentView, setCurrentView] = useState<AdminView>('overview');
+  const [selectedUser, setSelectedUser] = useState<UserWithBalance | null>(null);
+
+  const handleViewUser = (user: UserWithBalance) => {
+    setSelectedUser(user);
+    setCurrentView('user-detail');
+  };
+
+  const handleBackToUsers = () => {
+    setSelectedUser(null);
+    setCurrentView('users');
+  };
+
+  const handleBackToOverview = () => {
+    setSelectedUser(null);
+    setCurrentView('overview');
+  };
+
+  // Render user detail view
+  if (currentView === 'user-detail' && selectedUser) {
+    return (
+      <UserDetail
+        user={selectedUser}
+        onBack={handleBackToUsers}
+        onUserUpdate={() => {
+          // Refresh logic if needed
+        }}
+      />
+    );
+  }
+
+  // Render user management view
+  if (currentView === 'users') {
+    return (
+      <UserManagement onViewUser={handleViewUser} />
+    );
+  }
+
+  // Render overview (default)
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -68,7 +117,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* User Management */}
         <button
-          onClick={() => console.log('Navigate to User Management')}
+          onClick={() => setCurrentView('users')}
           className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-indigo-500/50 transition-all text-left"
         >
           <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-500/30 transition-colors">
