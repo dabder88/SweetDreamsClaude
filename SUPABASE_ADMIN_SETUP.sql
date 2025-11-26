@@ -144,21 +144,33 @@ CREATE TABLE IF NOT EXISTS user_balances (
 -- Enable RLS
 ALTER TABLE user_balances ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Users can view their own balance
-CREATE POLICY "Users can view own balance"
-  ON user_balances FOR SELECT
-  USING (auth.uid() = user_id);
-
--- RLS Policy: Admins can view all balances
-CREATE POLICY "Admins can view all balances"
+-- RLS Policy: Users and admins can view balances (users see own, admins see all)
+CREATE POLICY "Users and admins can view balances"
   ON user_balances FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid())
+    auth.uid() = user_id
+    OR EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid())
   );
 
--- RLS Policy: Admins can manage balances
-CREATE POLICY "Admins can manage balances"
-  ON user_balances FOR ALL
+-- RLS Policy: System and admins can create balances
+CREATE POLICY "System and admins can create balances"
+  ON user_balances FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id
+    OR EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid())
+  );
+
+-- RLS Policy: Users and admins can update balances
+CREATE POLICY "Users and admins can update balances"
+  ON user_balances FOR UPDATE
+  USING (
+    auth.uid() = user_id
+    OR EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid())
+  );
+
+-- RLS Policy: Only admins can delete balances
+CREATE POLICY "Admins can delete balances"
+  ON user_balances FOR DELETE
   USING (
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid())
   );

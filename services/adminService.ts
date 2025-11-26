@@ -600,6 +600,45 @@ export const debitUserBalance = async (
 };
 
 /**
+ * Adjust user balance (universal function for credit/debit)
+ * @param userId - User ID
+ * @param amount - Amount to adjust (positive for credit, will be made positive for debit)
+ * @param type - Transaction type (ADMIN_CREDIT or ADMIN_DEBIT)
+ * @param description - Reason for adjustment
+ */
+export const adjustBalance = async (
+  userId: string,
+  amount: number,
+  type: TransactionType,
+  description: string
+): Promise<Transaction | null> => {
+  try {
+    // Get current admin user
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    if (!adminUser) {
+      console.error('No admin user found');
+      return null;
+    }
+
+    // Ensure amount is positive
+    const positiveAmount = Math.abs(amount);
+
+    // Call appropriate function based on type
+    if (type === TransactionType.ADMIN_CREDIT) {
+      return await creditUserBalance(userId, positiveAmount, description, adminUser.id);
+    } else if (type === TransactionType.ADMIN_DEBIT) {
+      return await debitUserBalance(userId, positiveAmount, description, adminUser.id);
+    } else {
+      console.error('Invalid transaction type for adjustBalance:', type);
+      return null;
+    }
+  } catch (err) {
+    console.error('Error in adjustBalance:', err);
+    return null;
+  }
+};
+
+/**
  * Get transactions with filters
  */
 export const getTransactions = async (filters?: TransactionFilters): Promise<Transaction[]> => {
