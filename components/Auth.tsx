@@ -60,10 +60,15 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         if (error) {
           setError(error.message);
         } else if (user) {
-          setSuccessMessage('Регистрация успешна! Проверьте email для подтверждения.');
+          setSuccessMessage('Регистрация успешна! Проверьте email для подтверждения. После подтверждения войдите в систему.');
+          // Do NOT call onAuthSuccess() - user must confirm email first
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          // Switch to signin mode after 3 seconds
           setTimeout(() => {
-            onAuthSuccess();
-          }, 2000);
+            switchMode('signin');
+          }, 3000);
         }
       } else if (mode === 'reset') {
         const { error } = await resetPassword(email);
