@@ -382,7 +382,7 @@ CREATE TRIGGER update_system_settings_updated_at
 CREATE OR REPLACE FUNCTION get_all_users()
 RETURNS TABLE (
   id UUID,
-  email TEXT,
+  email VARCHAR(255),
   created_at TIMESTAMPTZ,
   raw_user_meta_data JSONB,
   last_sign_in_at TIMESTAMPTZ,
@@ -416,7 +416,7 @@ $$;
 CREATE OR REPLACE FUNCTION get_user_by_id(target_user_id UUID)
 RETURNS TABLE (
   id UUID,
-  email TEXT,
+  email VARCHAR(255),
   created_at TIMESTAMPTZ,
   raw_user_meta_data JSONB,
   last_sign_in_at TIMESTAMPTZ,
