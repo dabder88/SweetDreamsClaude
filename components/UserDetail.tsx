@@ -14,15 +14,20 @@ import {
   CheckCircle,
   Edit,
   Save,
-  X
+  X,
+  BarChart3,
+  FileText,
+  Clock
 } from 'lucide-react';
 import {
   getUserTransactions,
   adjustBalance,
+  getUserAnalysisMetadata,
+  getUserDreamEntries,
   TransactionType,
   type Transaction
 } from '../services/adminService';
-import type { User } from '../types';
+import type { User, AnalysisMetadata, JournalEntry } from '../types';
 
 interface UserWithBalance extends User {
   balance?: number;
@@ -45,8 +50,15 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
   const [processing, setProcessing] = useState(false);
   const [currentBalance, setCurrentBalance] = useState(user.balance || 0);
 
+  // Dream history states
+  const [analysisMetadata, setAnalysisMetadata] = useState<AnalysisMetadata[]>([]);
+  const [dreamEntries, setDreamEntries] = useState<JournalEntry[]>([]);
+  const [loadingDreams, setLoadingDreams] = useState(false);
+  const [activeTab, setActiveTab] = useState<'transactions' | 'dreams' | 'analytics'>('transactions');
+
   useEffect(() => {
     loadTransactions();
+    loadDreamHistory();
     setCurrentBalance(user.balance || 0);
   }, [user.id, user.balance]);
 
@@ -59,6 +71,22 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
       console.error('Error loading transactions:', err);
     } finally {
       setLoadingTransactions(false);
+    }
+  };
+
+  const loadDreamHistory = async () => {
+    try {
+      setLoadingDreams(true);
+      const [metadata, entries] = await Promise.all([
+        getUserAnalysisMetadata(user.id),
+        getUserDreamEntries(user.id)
+      ]);
+      setAnalysisMetadata(metadata);
+      setDreamEntries(entries);
+    } catch (err) {
+      console.error('Error loading dream history:', err);
+    } finally {
+      setLoadingDreams(false);
     }
   };
 
@@ -276,12 +304,53 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
             </div>
           </div>
 
-          {/* Transactions */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <TrendingUp size={20} className="text-blue-400" />
-              История транзакций
-            </h3>
+          {/* Tabs Section */}
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden">
+            {/* Tab Headers */}
+            <div className="flex border-b border-slate-700/50">
+              <button
+                type="button"
+                onClick={() => setActiveTab('transactions')}
+                className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
+                  activeTab === 'transactions'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
+                }`}
+              >
+                <TrendingUp size={18} />
+                <span className="font-medium">Транзакции</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dreams')}
+                className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
+                  activeTab === 'dreams'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
+                }`}
+              >
+                <BookOpen size={18} />
+                <span className="font-medium">История снов</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
+                  activeTab === 'analytics'
+                    ? 'bg-green-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
+                }`}
+              >
+                <BarChart3 size={18} />
+                <span className="font-medium">Аналитика</span>
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6">
+              {/* Transactions Tab */}
+              {activeTab === 'transactions' && (
+                <div>
 
             {loadingTransactions ? (
               <div className="text-center py-8 text-slate-400">Загрузка...</div>
@@ -313,6 +382,177 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                 ))}
               </div>
             )}
+                </div>
+              )}
+
+              {/* Dreams Tab */}
+              {activeTab === 'dreams' && (
+                <div className="space-y-4">
+                  {loadingDreams ? (
+                    <div className="text-center py-8 text-slate-400">Загрузка...</div>
+                  ) : (
+                    <>
+                      {/* Saved Dreams (dream_entries) */}
+                      {dreamEntries.length > 0 && (
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <FileText size={18} className="text-green-400" />
+                            Сохраненные сны ({dreamEntries.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {dreamEntries.map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50 hover:border-green-500/30 transition-colors"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <div className="text-white font-medium line-clamp-2">
+                                      {entry.dreamData?.description || 'Описание отсутствует'}
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
+                                      <span className="flex items-center gap-1">
+                                        <Clock size={12} />
+                                        {new Date(entry.timestamp).toLocaleString('ru-RU')}
+                                      </span>
+                                      {entry.analysis && (
+                                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                                          {entry.dreamData?.method || 'Анализ'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {entry.notes && (
+                                  <div className="text-sm text-slate-500 mt-2 line-clamp-1">
+                                    Заметки: {entry.notes}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Unsaved Dreams (analysis_metadata) */}
+                      {analysisMetadata.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <FileText size={18} className="text-yellow-400" />
+                            Несохраненные анализы ({analysisMetadata.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {analysisMetadata.map((metadata) => (
+                              <div
+                                key={metadata.id}
+                                className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50 hover:border-yellow-500/30 transition-colors"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="text-white font-medium line-clamp-2">
+                                      {metadata.dream_description || 'Без описания'}
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
+                                      <span className="flex items-center gap-1">
+                                        <Clock size={12} />
+                                        {new Date(metadata.timestamp).toLocaleString('ru-RU')}
+                                      </span>
+                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
+                                        {metadata.method}
+                                      </span>
+                                      {metadata.emotion && (
+                                        <span className="text-slate-500">
+                                          Эмоция: {metadata.emotion}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {dreamEntries.length === 0 && analysisMetadata.length === 0 && (
+                        <div className="text-center py-8 text-slate-400">
+                          <BookOpen className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+                          <p>У пользователя пока нет снов</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Analytics Tab */}
+              {activeTab === 'analytics' && (
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-white mb-3">Статистика пользователя</h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                      <div className="text-sm text-slate-400 mb-1">Всего анализов</div>
+                      <div className="text-2xl font-bold text-white">{analysisMetadata.length}</div>
+                    </div>
+                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                      <div className="text-sm text-slate-400 mb-1">Сохранено в журнал</div>
+                      <div className="text-2xl font-bold text-white">{dreamEntries.length}</div>
+                    </div>
+                  </div>
+
+                  {analysisMetadata.length > 0 && (
+                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                      <div className="text-sm text-slate-400 mb-3">Методы анализа</div>
+                      <div className="space-y-2">
+                        {Object.entries(
+                          analysisMetadata.reduce((acc, m) => {
+                            acc[m.method] = (acc[m.method] || 0) + 1;
+                            return acc;
+                          }, {} as Record<string, number>)
+                        ).map(([method, count]) => (
+                          <div key={method} className="flex items-center justify-between">
+                            <span className="text-white capitalize">{method}</span>
+                            <span className="text-slate-400">{count} раз</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {analysisMetadata.length > 0 && (
+                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                      <div className="text-sm text-slate-400 mb-3">Частые эмоции</div>
+                      <div className="space-y-2">
+                        {Object.entries(
+                          analysisMetadata
+                            .filter(m => m.emotion)
+                            .reduce((acc, m) => {
+                              acc[m.emotion] = (acc[m.emotion] || 0) + 1;
+                              return acc;
+                            }, {} as Record<string, number>)
+                        )
+                          .sort((a, b) => b[1] - a[1])
+                          .slice(0, 5)
+                          .map(([emotion, count]) => (
+                            <div key={emotion} className="flex items-center justify-between">
+                              <span className="text-white">{emotion}</span>
+                              <span className="text-slate-400">{count} раз</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {analysisMetadata.length === 0 && (
+                    <div className="text-center py-8 text-slate-400">
+                      <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+                      <p>Недостаточно данных для аналитики</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

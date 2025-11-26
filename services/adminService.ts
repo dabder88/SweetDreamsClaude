@@ -956,3 +956,53 @@ export const getSystemStats = async (): Promise<SystemStats> => {
     };
   }
 };
+
+// =====================================================
+// USER DREAM HISTORY
+// =====================================================
+
+/**
+ * Get all analysis metadata for a specific user (unsaved dreams)
+ */
+export const getUserAnalysisMetadata = async (userId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_metadata')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user analysis metadata:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Error in getUserAnalysisMetadata:', err);
+    return [];
+  }
+};
+
+/**
+ * Get all dream entries for a specific user (saved dreams with full analysis)
+ */
+export const getUserDreamEntries = async (userId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('dream_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user dream entries:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Error in getUserDreamEntries:', err);
+    return [];
+  }
+};
