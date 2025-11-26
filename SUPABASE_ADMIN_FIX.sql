@@ -18,10 +18,14 @@ CREATE POLICY "Users can insert own admin record"
 -- =====================================================
 -- Fix policies to allow proper access for both users and admins
 
--- Drop existing policies
+-- Drop existing policies (including new ones if they exist)
 DROP POLICY IF EXISTS "Users can view own balance" ON user_balances;
 DROP POLICY IF EXISTS "Admins can view all balances" ON user_balances;
 DROP POLICY IF EXISTS "Admins can manage balances" ON user_balances;
+DROP POLICY IF EXISTS "Users and admins can view balances" ON user_balances;
+DROP POLICY IF EXISTS "System and admins can create balances" ON user_balances;
+DROP POLICY IF EXISTS "Users and admins can update balances" ON user_balances;
+DROP POLICY IF EXISTS "Admins can delete balances" ON user_balances;
 
 -- Create unified SELECT policy (users see own, admins see all)
 CREATE POLICY "Users and admins can view balances"
