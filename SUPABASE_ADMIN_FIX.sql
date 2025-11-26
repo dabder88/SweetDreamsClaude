@@ -55,10 +55,88 @@ CREATE POLICY "Admins can delete balances"
   );
 
 -- =====================================================
+-- Fix: Add RPC functions for admin user management
+-- =====================================================
+-- These functions allow admins to access auth.users data safely
+
+-- Function to get all users (admin only)
+CREATE OR REPLACE FUNCTION get_all_users()
+RETURNS TABLE (
+  id UUID,
+  email TEXT,
+  created_at TIMESTAMPTZ,
+  raw_user_meta_data JSONB,
+  last_sign_in_at TIMESTAMPTZ,
+  email_confirmed_at TIMESTAMPTZ
+)
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Check if caller is admin
+  IF NOT EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'Access denied: admin role required';
+  END IF;
+
+  -- Return all users from auth.users
+  RETURN QUERY
+  SELECT
+    au.id,
+    au.email,
+    au.created_at,
+    au.raw_user_meta_data,
+    au.last_sign_in_at,
+    au.email_confirmed_at
+  FROM auth.users au
+  ORDER BY au.created_at DESC;
+END;
+$$;
+
+-- Function to get user by ID (admin only)
+CREATE OR REPLACE FUNCTION get_user_by_id(target_user_id UUID)
+RETURNS TABLE (
+  id UUID,
+  email TEXT,
+  created_at TIMESTAMPTZ,
+  raw_user_meta_data JSONB,
+  last_sign_in_at TIMESTAMPTZ,
+  email_confirmed_at TIMESTAMPTZ
+)
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Check if caller is admin
+  IF NOT EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'Access denied: admin role required';
+  END IF;
+
+  -- Return specific user
+  RETURN QUERY
+  SELECT
+    au.id,
+    au.email,
+    au.created_at,
+    au.raw_user_meta_data,
+    au.last_sign_in_at,
+    au.email_confirmed_at
+  FROM auth.users au
+  WHERE au.id = target_user_id;
+END;
+$$;
+
+-- Grant execute permissions to authenticated users (RLS will check admin status)
+GRANT EXECUTE ON FUNCTION get_all_users() TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_by_id(UUID) TO authenticated;
+
+-- =====================================================
 -- DONE
 -- =====================================================
 -- After running this script:
 -- 1. Users will be able to auto-promote to admin
 -- 2. Users can view/update their own balances
 -- 3. Admins can view/manage all user balances
+-- 4. Admins can access user data via RPC functions
 -- =====================================================

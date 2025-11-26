@@ -196,32 +196,8 @@ export const checkAndPromoteAdmin = async (email: string): Promise<boolean> => {
  */
 export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
   try {
-    let query = supabase
-      .from('auth.users')
-      .select(`
-        id,
-        email,
-        created_at,
-        raw_user_meta_data
-      `);
-
-    // Apply date filters
-    if (filters?.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-    if (filters?.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
-
-    // Apply pagination
-    const limit = filters?.limit || 50;
-    const offset = filters?.offset || 0;
-    query = query.range(offset, offset + limit - 1);
-
-    // Order by creation date (newest first)
-    query = query.order('created_at', { ascending: false });
-
-    const { data, error } = await query;
+    // Call RPC function to get all users (admin only)
+    const { data, error } = await supabase.rpc('get_all_users');
 
     if (error) {
       console.error('Error fetching users:', error);
@@ -280,17 +256,17 @@ export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
  */
 export const getUserDetails = async (userId: string): Promise<UserDetails | null> => {
   try {
-    // Get basic user info
-    const { data: userData, error: userError } = await supabase
-      .from('auth.users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    // Get basic user info via RPC
+    const { data: userDataArray, error: userError } = await supabase.rpc('get_user_by_id', {
+      target_user_id: userId
+    });
 
-    if (userError || !userData) {
+    if (userError || !userDataArray || userDataArray.length === 0) {
       console.error('Error fetching user:', userError);
       return null;
     }
+
+    const userData = userDataArray[0];
 
     // Get user role
     const role = await getUserRole(userId);
