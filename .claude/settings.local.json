@@ -10,7 +10,15 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(tasklist:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx -y @modelcontextprotocol/server-sequential-thinking)",
+      "Bash(claude mcp add sequential-thinking \"cmd /c npx -y @modelcontextprotocol/server-sequential-thinking\")",
+      "Bash(claude mcp:*)",
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(node:*)",
+      "Bash(cat:*)",
+      "mcp__playwright__*"
     ],
     "deny": [],
     "ask": []
