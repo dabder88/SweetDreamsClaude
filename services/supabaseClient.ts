@@ -39,3 +39,9 @@ export const supabase: SupabaseClient = createClient(
     }
   }
 );
+
+// Make supabase available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
+  console.log('🔧 [Supabase] Client available as window.supabase for debugging');
+}
