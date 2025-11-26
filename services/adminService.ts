@@ -373,10 +373,17 @@ export const getUserBalance = async (userId: string): Promise<UserBalance | null
       .from('user_balances')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no row exists
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-      console.error('Error fetching user balance:', error);
+    if (error) {
+      // Log 406 errors with more details for debugging
+      if (error.code === '406' || error.message?.includes('406')) {
+        console.warn(`[getUserBalance] 406 error for user ${userId}:`, error);
+        console.warn('[getUserBalance] This usually means RLS is blocking access. Check admin_users table.');
+      } else if (error.code !== 'PGRST116') {
+        // Only log errors that are not "not found"
+        console.error('Error fetching user balance:', error);
+      }
       return null;
     }
 
