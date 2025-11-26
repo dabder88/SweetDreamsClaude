@@ -16,9 +16,11 @@ import {
   ArrowLeft,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  BookOpen
 } from 'lucide-react';
 import { getAllUsers, getUserBalance, type UserFilters } from '../services/adminService';
+import { supabase } from '../services/supabaseClient';
 import type { User } from '../types';
 
 interface UserWithBalance extends User {
@@ -71,14 +73,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
 
       const fetchedUsers = await getAllUsers(userFilters);
 
-      // Load balances for each user
+      // Load balances and dream counts for each user
       const usersWithBalances = await Promise.all(
         fetchedUsers.map(async (user) => {
           const balanceData = await getUserBalance(user.id);
+
+          // Count dreams from dream_entries table
+          const { count: dreamCount } = await supabase
+            .from('dream_entries')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
           return {
             ...user,
             balance: balanceData?.balance || 0,
-            dreamCount: 0 // TODO: Fetch from dream_entries count
+            dreamCount: dreamCount || 0
           };
         })
       );
@@ -367,6 +376,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                   <SortableHeader field="email" label="Email" showFilter />
                   <SortableHeader field="role" label="Роль" showFilter />
                   <SortableHeader field="balance" label="Баланс" showFilter />
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                    Сны
+                  </th>
                   <SortableHeader field="created_at" label="Регистрация" />
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
                     Действия
@@ -410,6 +422,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                       <div className="flex items-center gap-2 text-white font-medium">
                         <CreditCard size={16} className="text-blue-400" />
                         {user.balance || 0} ₽
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-purple-400 font-medium">
+                        <BookOpen size={16} />
+                        {user.dreamCount || 0}
                       </div>
                     </td>
                     <td className="px-6 py-4">
