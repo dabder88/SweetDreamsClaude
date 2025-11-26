@@ -5,6 +5,41 @@ export interface AuthError {
   message: string;
 }
 
+/**
+ * Translate Supabase auth errors to Russian
+ */
+const translateAuthError = (errorMessage: string): string => {
+  const errorMap: Record<string, string> = {
+    'Invalid login credentials': 'Неверный email или пароль',
+    'Email not confirmed': 'Email не подтверждён. Проверьте почту и перейдите по ссылке подтверждения.',
+    'User already registered': 'Пользователь с таким email уже зарегистрирован',
+    'Password should be at least 6 characters': 'Пароль должен содержать минимум 6 символов',
+    'Unable to validate email address: invalid format': 'Неверный формат email адреса',
+    'Signup requires a valid password': 'Введите корректный пароль',
+    'User not found': 'Пользователь не найден',
+    'Email rate limit exceeded': 'Превышен лимит отправки писем. Попробуйте позже.',
+    'Invalid email or password': 'Неверный email или пароль',
+    'Email link is invalid or has expired': 'Ссылка недействительна или устарела',
+    'Token has expired or is invalid': 'Токен истёк или недействителен',
+    'New password should be different from the old password': 'Новый пароль должен отличаться от старого',
+  };
+
+  // Check for exact match
+  if (errorMap[errorMessage]) {
+    return errorMap[errorMessage];
+  }
+
+  // Check for partial matches
+  for (const [englishError, russianError] of Object.entries(errorMap)) {
+    if (errorMessage.includes(englishError)) {
+      return russianError;
+    }
+  }
+
+  // Return original message if no translation found
+  return errorMessage;
+};
+
 export interface AuthResponse {
   user: User | null;
   error: AuthError | null;
@@ -21,7 +56,7 @@ export const signUp = async (email: string, password: string): Promise<AuthRespo
     });
 
     if (error) {
-      return { user: null, error: { message: error.message } };
+      return { user: null, error: { message: translateAuthError(error.message) } };
     }
 
     if (data.user) {
@@ -56,7 +91,7 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
     });
 
     if (error) {
-      return { user: null, error: { message: error.message } };
+      return { user: null, error: { message: translateAuthError(error.message) } };
     }
 
     if (data.user) {
@@ -87,7 +122,7 @@ export const signOut = async (): Promise<{ error: AuthError | null }> => {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
     return { error: null };
   } catch (err) {
@@ -149,7 +184,7 @@ export const resetPassword = async (email: string): Promise<{ error: AuthError |
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
     return { error: null };
   } catch (err) {
@@ -166,7 +201,7 @@ export const updatePassword = async (newPassword: string): Promise<{ error: Auth
       password: newPassword
     });
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
     return { error: null };
   } catch (err) {
@@ -183,7 +218,7 @@ export const updateEmail = async (newEmail: string): Promise<{ error: AuthError 
       email: newEmail
     });
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
     return { error: null };
   } catch (err) {
@@ -205,7 +240,7 @@ export const updateUserMetadata = async (metadata: {
       data: metadata
     });
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
     return { error: null };
   } catch (err) {
@@ -232,7 +267,7 @@ export const uploadAvatar = async (file: File, userId: string): Promise<{ url: s
       });
 
     if (uploadError) {
-      return { url: null, error: { message: uploadError.message } };
+      return { url: null, error: { message: translateAuthError(uploadError.message) } };
     }
 
     // Get public URL
@@ -263,7 +298,7 @@ export const deleteAvatar = async (avatarUrl: string): Promise<{ error: AuthErro
       .remove([filePath]);
 
     if (error) {
-      return { error: { message: error.message } };
+      return { error: { message: translateAuthError(error.message) } };
     }
 
     return { error: null };
