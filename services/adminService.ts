@@ -600,9 +600,9 @@ export const adjustBalance = async (
     const positiveAmount = Math.abs(amount);
 
     // Call appropriate function based on type
-    if (type === TransactionType.ADMIN_CREDIT) {
+    if (type === TransactionType.ADMIN_CREDIT || type === TransactionType.MANUAL_CREDIT) {
       return await creditUserBalance(userId, positiveAmount, description, adminUser.id);
-    } else if (type === TransactionType.ADMIN_DEBIT) {
+    } else if (type === TransactionType.ADMIN_DEBIT || type === TransactionType.MANUAL_DEBIT) {
       return await debitUserBalance(userId, positiveAmount, description, adminUser.id);
     } else {
       console.error('Invalid transaction type for adjustBalance:', type);

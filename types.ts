@@ -148,6 +148,10 @@ export enum TransactionType {
   PURCHASE = 'purchase',         // Purchase (analysis, image)
   MANUAL_CREDIT = 'manual_credit', // Manual credit by admin
   MANUAL_DEBIT = 'manual_debit',   // Manual debit by admin
+  ADMIN_CREDIT = 'admin_credit', // Admin credit (alias for MANUAL_CREDIT)
+  ADMIN_DEBIT = 'admin_debit',   // Admin debit (alias for MANUAL_DEBIT)
+  DREAM_ANALYSIS = 'dream_analysis', // Dream analysis purchase
+  IMAGE_GENERATION = 'image_generation', // Image generation purchase
   REFUND = 'refund'              // Refund
 }
 
