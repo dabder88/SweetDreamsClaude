@@ -6,6 +6,8 @@ import type { User } from '../types';
 
 interface AdminPanelProps {
   onNavigate: (view: string) => void;
+  currentView?: string; // Current sub-view from App.tsx
+  onViewChange?: (view: string) => void; // Callback to change view
 }
 
 interface UserWithBalance extends User {
@@ -13,10 +15,14 @@ interface UserWithBalance extends User {
   dreamCount?: number;
 }
 
-type AdminView = 'overview' | 'users' | 'user-detail';
+type AdminView = 'overview' | 'users' | 'user-detail' | 'finances' | 'analytics' | 'audit';
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
-  const [currentView, setCurrentView] = useState<AdminView>('overview');
+const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange }) => {
+  // Use prop view if provided, otherwise use local state
+  const [localView, setLocalView] = useState<AdminView>('overview');
+  const currentView = (propView as AdminView) || localView;
+  const setCurrentView = onViewChange || setLocalView;
+
   const [selectedUser, setSelectedUser] = useState<UserWithBalance | null>(null);
 
   const handleViewUser = (user: UserWithBalance) => {
@@ -50,7 +56,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
   // Render user management view
   if (currentView === 'users') {
     return (
-      <UserManagement onViewUser={handleViewUser} />
+      <UserManagement
+        onViewUser={handleViewUser}
+        onBack={handleBackToOverview}
+      />
     );
   }
 

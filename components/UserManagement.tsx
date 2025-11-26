@@ -12,7 +12,8 @@ import {
   MoreVertical,
   Calendar,
   Mail,
-  CreditCard
+  CreditCard,
+  ArrowLeft
 } from 'lucide-react';
 import { getAllUsers, getUserBalance, type UserFilters } from '../services/adminService';
 import type { User } from '../types';
@@ -24,9 +25,10 @@ interface UserWithBalance extends User {
 
 interface UserManagementProps {
   onViewUser: (user: UserWithBalance) => void;
+  onBack?: () => void; // Optional back button callback
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ onViewUser }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) => {
   const [users, setUsers] = useState<UserWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,8 +115,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Вернуться в админ-панель"
+            className="w-12 h-12 rounded-xl bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors"
+          >
+            <ArrowLeft className="text-white" size={20} />
+          </button>
+        )}
+        <div className="flex items-center gap-3 flex-1">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
             <Users className="text-white" size={24} />
           </div>

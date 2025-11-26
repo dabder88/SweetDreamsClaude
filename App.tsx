@@ -53,6 +53,7 @@ function App() {
   const [currentAnalysisResult, setCurrentAnalysisResult] = useState<any>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [intendedView, setIntendedView] = useState<AppView | null>(null); // Remember where user wanted to go before auth
+  const [adminSubView, setAdminSubView] = useState<string>('overview'); // Current admin sub-view
 
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
@@ -360,7 +361,13 @@ function App() {
       {/* Sidebar (Hidden on mobile unless toggled) */}
       <div className={`fixed md:sticky top-0 left-0 h-screen z-50 transition-transform duration-300 transform
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <Sidebar currentView={view} onChangeView={navigateTo} user={user} />
+        <Sidebar
+          currentView={view}
+          onChangeView={navigateTo}
+          user={user}
+          adminSubView={adminSubView}
+          onAdminSubViewChange={setAdminSubView}
+        />
       </div>
 
       {/* Main Content Area */}
@@ -374,7 +381,13 @@ function App() {
           {view === 'analytics' && <Analytics />}
           {view === 'archetypes' && <Archetypes user={user} />}
           {view === 'settings' && <Settings user={user} onUserUpdate={setUser} />}
-          {view === 'admin' && user?.role === 'admin' && <AdminPanel onNavigate={navigateTo} />}
+          {view === 'admin' && user?.role === 'admin' && (
+            <AdminPanel
+              onNavigate={navigateTo}
+              currentView={adminSubView}
+              onViewChange={setAdminSubView}
+            />
+          )}
         </div>
 
       </main>
