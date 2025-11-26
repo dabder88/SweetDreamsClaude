@@ -16,6 +16,7 @@ import Settings from './components/Settings';
 import Archetypes from './components/Archetypes';
 import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
+import AdminPanel from './components/AdminPanel';
 import { ArrowRight, ArrowLeft, User as UserIcon, Menu, Ghost, Moon, Sparkles, AlertCircle, Save } from 'lucide-react';
 import TiltCard from './components/TiltCard';
 import { getCurrentUser, onAuthStateChange } from './services/authService';
@@ -51,6 +52,7 @@ function App() {
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [currentAnalysisResult, setCurrentAnalysisResult] = useState<any>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [intendedView, setIntendedView] = useState<AppView | null>(null); // Remember where user wanted to go before auth
 
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
@@ -139,22 +141,35 @@ function App() {
 
   const navigateTo = (newView: AppView) => {
     // Protect private views - require authentication if Supabase is configured
-    const privateViews: AppView[] = ['dashboard', 'journal', 'dreamView', 'analytics', 'settings', 'archetypes'];
+    const privateViews: AppView[] = ['dashboard', 'journal', 'dreamView', 'analytics', 'settings', 'archetypes', 'admin'];
 
     if (isSupabaseConfigured() && privateViews.includes(newView) && !user) {
+      setIntendedView(newView); // Remember where user wanted to go
       setView('auth');
       setMobileMenuOpen(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    // Admin view requires admin role
+    if (newView === 'admin') {
+      if (!user || user.role !== 'admin') {
+        // Non-admin users are redirected to dashboard
+        setView('dashboard');
+        setMobileMenuOpen(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     setView(newView);
+    setIntendedView(null); // Clear intended view when successfully navigating
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAuthSuccess = async () => {
-    // After successful auth, update user state and navigate to wizard (for dream interpretation)
+    // After successful auth, update user state and navigate appropriately
     if (isSupabaseConfigured()) {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -168,8 +183,14 @@ function App() {
       }
     }
 
-    // Navigate to wizard to start dream interpretation
-    setView('wizard');
+    // Navigate to intended view if set (e.g., user clicked "Личный кабинет")
+    // Otherwise navigate to wizard (default for "Начать толкование")
+    if (intendedView) {
+      setView(intendedView);
+      setIntendedView(null); // Clear after using
+    } else {
+      setView('wizard');
+    }
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -353,6 +374,7 @@ function App() {
           {view === 'analytics' && <Analytics />}
           {view === 'archetypes' && <Archetypes user={user} />}
           {view === 'settings' && <Settings user={user} onUserUpdate={setUser} />}
+          {view === 'admin' && user?.role === 'admin' && <AdminPanel onNavigate={navigateTo} />}
         </div>
 
       </main>

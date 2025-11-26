@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User, Home } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User, Home, Shield } from 'lucide-react';
 import { AppView, User as UserType } from '../types';
 import { signOut } from '../services/authService';
 import { isSupabaseConfigured } from '../services/supabaseClient';
@@ -12,7 +12,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) => {
-
   const handleLogout = async () => {
     if (isSupabaseConfigured() && user) {
       await signOut();
@@ -74,8 +73,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) =>
               key={item.id}
               onClick={() => onChangeView(item.id as AppView)}
               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group
-                ${isActive 
-                  ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)]' 
+                ${isActive
+                  ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)]'
                   : 'text-slate-400 hover:bg-white/5 hover:text-indigo-300'
                 }
               `}
@@ -86,6 +85,26 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user }) =>
             </button>
           );
         })}
+
+        {/* Admin Panel - Only visible for admin users */}
+        {user?.role === 'admin' && (
+          <>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-4 mb-2 mt-6">Администрирование</div>
+            <button
+              onClick={() => onChangeView('admin')}
+              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group
+                ${currentView === 'admin'
+                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]'
+                  : 'text-slate-400 hover:bg-red-900/10 hover:text-red-400 border border-red-500/20'
+                }
+              `}
+            >
+              <Shield size={20} className={currentView === 'admin' ? 'text-white' : 'text-red-500/70 group-hover:text-red-400'} />
+              <span className="font-medium">Админ-панель</span>
+              {currentView === 'admin' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>}
+            </button>
+          </>
+        )}
       </nav>
 
       {/* Footer Action */}

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { User } from '../types';
+import { getUserRole, checkAndPromoteAdmin, getUserBalance } from './adminService';
 
 export interface AuthError {
   message: string;
@@ -95,6 +96,15 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
     }
 
     if (data.user) {
+      // Check and promote to admin if email is in admin list
+      await checkAndPromoteAdmin(email);
+
+      // Get user role
+      const role = await getUserRole(data.user.id);
+
+      // Get user balance
+      const balanceData = await getUserBalance(data.user.id);
+
       return {
         user: {
           id: data.user.id,
@@ -104,6 +114,8 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
           avatar_url: data.user.user_metadata?.avatar_url,
           gender: data.user.user_metadata?.gender,
           date_of_birth: data.user.user_metadata?.date_of_birth,
+          role,
+          balance: balanceData?.balance,
         },
         error: null,
       };
@@ -138,6 +150,12 @@ export const getCurrentUser = async (): Promise<User | null> => {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
+      // Get user role
+      const role = await getUserRole(user.id);
+
+      // Get user balance
+      const balanceData = await getUserBalance(user.id);
+
       return {
         id: user.id,
         email: user.email || '',
@@ -146,6 +164,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
         avatar_url: user.user_metadata?.avatar_url,
         gender: user.user_metadata?.gender,
         date_of_birth: user.user_metadata?.date_of_birth,
+        role,
+        balance: balanceData?.balance,
       };
     }
 
@@ -160,8 +180,14 @@ export const getCurrentUser = async (): Promise<User | null> => {
  * Subscribe to authentication state changes
  */
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
-  return supabase.auth.onAuthStateChange((event, session) => {
+  return supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
+      // Get user role
+      const role = await getUserRole(session.user.id);
+
+      // Get user balance
+      const balanceData = await getUserBalance(session.user.id);
+
       callback({
         id: session.user.id,
         email: session.user.email || '',
@@ -170,6 +196,8 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
         avatar_url: session.user.user_metadata?.avatar_url,
         gender: session.user.user_metadata?.gender,
         date_of_birth: session.user.user_metadata?.date_of_birth,
+        role,
+        balance: balanceData?.balance,
       });
     } else {
       callback(null);
