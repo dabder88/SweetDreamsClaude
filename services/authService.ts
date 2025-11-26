@@ -218,10 +218,10 @@ export const updateUserMetadata = async (metadata: {
  */
 export const uploadAvatar = async (file: File, userId: string): Promise<{ url: string | null; error: AuthError | null }> => {
   try {
-    // Create unique filename
+    // Create unique filename with user folder structure for RLS
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    const fileName = `avatar-${Date.now()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
 
     // Upload file to Supabase Storage
     const { error: uploadError } = await supabase.storage
