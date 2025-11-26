@@ -43,10 +43,12 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
   const [balanceAmount, setBalanceAmount] = useState('');
   const [balanceReason, setBalanceReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState(user.balance || 0);
 
   useEffect(() => {
     loadTransactions();
-  }, [user.id]);
+    setCurrentBalance(user.balance || 0);
+  }, [user.id, user.balance]);
 
   const loadTransactions = async () => {
     try {
@@ -78,12 +80,17 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
         ? TransactionType.ADMIN_CREDIT
         : TransactionType.ADMIN_DEBIT;
 
-      await adjustBalance(
+      const transaction = await adjustBalance(
         user.id,
         parseFloat(balanceAmount),
         type,
         balanceReason
       );
+
+      if (transaction) {
+        // Update local balance immediately
+        setCurrentBalance(transaction.balance_after);
+      }
 
       // Reload transactions and notify parent
       await loadTransactions();
@@ -208,7 +215,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                 </div>
                 <div>
                   <div className="text-blue-100 text-sm">Баланс пользователя</div>
-                  <div className="text-3xl font-bold text-white">{user.balance || 0} ₽</div>
+                  <div className="text-3xl font-bold text-white">{currentBalance} ₽</div>
                 </div>
               </div>
               <button
