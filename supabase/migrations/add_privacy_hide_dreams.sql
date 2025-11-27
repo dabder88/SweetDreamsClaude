@@ -11,7 +11,11 @@
 -- =====================================================
 -- Update get_all_users function to include privacy field and admin role
 -- =====================================================
-CREATE OR REPLACE FUNCTION get_all_users()
+-- Drop existing function first (required when changing return type)
+DROP FUNCTION IF EXISTS get_all_users();
+
+-- Create new version with is_admin field
+CREATE FUNCTION get_all_users()
 RETURNS TABLE (
   id UUID,
   email VARCHAR(255),
