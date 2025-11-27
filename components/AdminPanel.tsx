@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText } from 'lucide-react';
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
+import AuditLog from './AuditLog';
 import type { User, JournalEntry } from '../types';
 import {
   getSystemStats,
@@ -108,6 +109,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
       <UserManagement
         key={refreshKey}
         onViewUser={handleViewUser}
+        onBack={handleBackToOverview}
+      />
+    );
+  }
+
+  // Render audit log view
+  if (currentView === 'audit') {
+    return (
+      <AuditLog
         onBack={handleBackToOverview}
       />
     );
@@ -226,7 +236,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
 
         {/* Audit Log */}
         <button
-          onClick={() => console.log('Navigate to Audit Log')}
+          onClick={() => setCurrentView('audit')}
           className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-purple-500/50 transition-all text-left"
         >
           <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-500/30 transition-colors">
