@@ -44,6 +44,9 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const [dateOfBirth, setDateOfBirth] = useState(user?.date_of_birth || '');
   const [savingDateOfBirth, setSavingDateOfBirth] = useState(false);
 
+  // Privacy state - LOCAL to avoid closure issues
+  const [privacyHideDreams, setPrivacyHideDreams] = useState(user?.privacy_hide_dreams || false);
+
   // Avatar states
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [deletingAvatar, setDeletingAvatar] = useState(false);
@@ -68,6 +71,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
     setName(user?.name || '');
     setGender(user?.gender || '');
     setDateOfBirth(user?.date_of_birth || '');
+    setPrivacyHideDreams(user?.privacy_hide_dreams || false);
   }, [user]);
 
   // --- ACTIONS ---
@@ -546,9 +550,13 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const handleTogglePrivacy = async () => {
     if (!user || user.role !== 'admin') return;
 
-    const newPrivacyValue = !user.privacy_hide_dreams;
+    const newPrivacyValue = !privacyHideDreams;
+    const previousValue = privacyHideDreams;
 
-    // Optimistically update UI immediately
+    // Optimistically update LOCAL state immediately
+    setPrivacyHideDreams(newPrivacyValue);
+
+    // Also update parent state
     onUserUpdate({
       ...user,
       privacy_hide_dreams: newPrivacyValue
@@ -561,10 +569,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       });
 
       if (error) {
-        // Revert on error
+        // Revert LOCAL state on error
+        setPrivacyHideDreams(previousValue);
         onUserUpdate({
           ...user,
-          privacy_hide_dreams: !newPrivacyValue
+          privacy_hide_dreams: previousValue
         });
         alert(error.message);
         setSavingPrivacy(false);
@@ -581,10 +590,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       }
     } catch (e) {
       console.error('Privacy toggle error:', e);
-      // Revert on error
+      // Revert LOCAL state on error
+      setPrivacyHideDreams(previousValue);
       onUserUpdate({
         ...user,
-        privacy_hide_dreams: !newPrivacyValue
+        privacy_hide_dreams: previousValue
       });
       alert('Ошибка изменения настроек приватности');
     } finally {
@@ -1134,19 +1144,19 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                         disabled={savingPrivacy}
                         aria-label="Переключить приватность снов"
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
-                          user.privacy_hide_dreams
+                          privacyHideDreams
                             ? 'bg-purple-600'
                             : 'bg-slate-600'
                         } ${savingPrivacy ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            user.privacy_hide_dreams ? 'translate-x-6' : 'translate-x-1'
+                            privacyHideDreams ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
                       </button>
                     </div>
-                    {user.privacy_hide_dreams && (
+                    {privacyHideDreams && (
                       <div className="mt-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                         <p className="text-xs text-purple-300 flex items-center gap-2">
                           <Check size={12} />
