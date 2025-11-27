@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText } from 'lucide-react';
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
-import type { User } from '../types';
+import type { User, JournalEntry } from '../types';
 
 interface AdminPanelProps {
   onNavigate: (view: string) => void;
   currentView?: string; // Current sub-view from App.tsx
   onViewChange?: (view: string) => void; // Callback to change view
+  onViewDream?: (entry: JournalEntry) => void; // Callback to view dream details
 }
 
 interface UserWithBalance extends User {
@@ -17,7 +18,7 @@ interface UserWithBalance extends User {
 
 type AdminView = 'overview' | 'users' | 'user-detail' | 'finances' | 'analytics' | 'audit';
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange, onViewDream }) => {
   // Use prop view if provided, otherwise use local state
   const [localView, setLocalView] = useState<AdminView>('overview');
   const currentView = (propView as AdminView) || localView;
@@ -49,6 +50,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
         onUserUpdate={() => {
           // Refresh logic if needed
         }}
+        onViewDream={onViewDream}
       />
     );
   }

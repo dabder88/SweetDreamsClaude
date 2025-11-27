@@ -1000,7 +1000,16 @@ export const getUserDreamEntries = async (userId: string): Promise<any[]> => {
       return [];
     }
 
-    return data || [];
+    // Transform snake_case to camelCase for TypeScript compatibility
+    return (data || []).map(entry => ({
+      id: entry.id,
+      user_id: entry.user_id,
+      timestamp: entry.timestamp,
+      dreamData: entry.dream_data,
+      analysis: entry.analysis,
+      imageUrl: entry.image_url,
+      notes: entry.notes
+    }));
   } catch (err) {
     console.error('Error in getUserDreamEntries:', err);
     return [];

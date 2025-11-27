@@ -132,9 +132,26 @@ const DreamView: React.FC<DreamViewProps> = ({ entry, onBack }) => {
           <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-950 text-indigo-300 uppercase tracking-wider border border-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
             {getMethodName(entry.dreamData.method)}
           </span>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-900 text-slate-400 border border-slate-700">
-            {entry.dreamData.context.emotion}
-          </span>
+          {entry.dreamData.context.emotion && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
+              {entry.dreamData.context.emotion}
+            </span>
+          )}
+          {entry.dreamData.context.dreamRole && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+              {entry.dreamData.context.dreamRole}
+            </span>
+          )}
+          {entry.dreamData.context.characterType && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+              {entry.dreamData.context.characterType}
+            </span>
+          )}
+          {entry.dreamData.context.recurring && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              Повторяющийся
+            </span>
+          )}
           <span className="flex items-center text-xs text-slate-500 ml-auto">
             <Calendar size={14} className="mr-2" />
             {formatDate(entry.timestamp)}
@@ -145,15 +162,27 @@ const DreamView: React.FC<DreamViewProps> = ({ entry, onBack }) => {
           {entry.dreamData.description}
         </h1>
 
-        <div className="flex flex-col md:flex-row gap-6 mt-6 pt-6 border-t border-slate-700/50">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-slate-700/50">
+          <div>
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Жизненная ситуация</h4>
             <p className="text-slate-300">{entry.dreamData.context.lifeSituation || "Не указана"}</p>
           </div>
-          <div className="flex-1">
+          <div>
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ассоциации</h4>
             <p className="text-slate-300">{entry.dreamData.context.associations || "Не указаны"}</p>
           </div>
+          {entry.dreamData.context.dayResidue && (
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Дневной остаток</h4>
+              <p className="text-slate-300">{entry.dreamData.context.dayResidue}</p>
+            </div>
+          )}
+          {entry.dreamData.context.physicalSensation && (
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Физические ощущения</h4>
+              <p className="text-slate-300">{entry.dreamData.context.physicalSensation}</p>
+            </div>
+          )}
         </div>
       </div>
 

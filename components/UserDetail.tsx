@@ -38,9 +38,10 @@ interface UserDetailProps {
   user: UserWithBalance;
   onBack: () => void;
   onUserUpdate?: () => void;
+  onViewDream?: (entry: JournalEntry) => void;
 }
 
-const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) => {
+const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onViewDream }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -401,23 +402,45 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                           </h4>
                           <div className="space-y-2">
                             {dreamEntries.map((entry) => (
-                              <div
+                              <button
                                 key={entry.id}
-                                className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50 hover:border-green-500/30 transition-colors"
+                                type="button"
+                                onClick={() => onViewDream && onViewDream(entry)}
+                                className="w-full text-left p-4 bg-slate-900/50 rounded-xl border border-slate-700/50 hover:border-green-500/50 hover:bg-slate-800/50 transition-all cursor-pointer"
                               >
                                 <div className="flex items-start justify-between mb-2">
                                   <div className="flex-1">
-                                    <div className="text-white font-medium line-clamp-2">
+                                    <div className="text-white font-medium line-clamp-2 mb-2">
                                       {entry.dreamData?.description || 'Описание отсутствует'}
                                     </div>
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                                      <span className="flex items-center gap-1">
+                                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                                      <span className="flex items-center gap-1 text-slate-400">
                                         <Clock size={12} />
                                         {new Date(entry.timestamp).toLocaleString('ru-RU')}
                                       </span>
-                                      {entry.analysis && (
-                                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
-                                          {entry.dreamData?.method || 'Анализ'}
+                                      {entry.dreamData?.method && (
+                                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded capitalize">
+                                          {entry.dreamData.method}
+                                        </span>
+                                      )}
+                                      {entry.dreamData?.context?.emotion && (
+                                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
+                                          {entry.dreamData.context.emotion}
+                                        </span>
+                                      )}
+                                      {entry.dreamData?.context?.dreamRole && (
+                                        <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">
+                                          {entry.dreamData.context.dreamRole}
+                                        </span>
+                                      )}
+                                      {entry.dreamData?.context?.characterType && (
+                                        <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">
+                                          {entry.dreamData.context.characterType}
+                                        </span>
+                                      )}
+                                      {entry.dreamData?.context?.recurring && (
+                                        <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">
+                                          Повторяющийся
                                         </span>
                                       )}
                                     </div>
@@ -428,7 +451,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                                     Заметки: {entry.notes}
                                   </div>
                                 )}
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -449,25 +472,37 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <div className="text-white font-medium line-clamp-2">
+                                    <div className="text-white font-medium line-clamp-2 mb-2">
                                       {metadata.dream_description || 'Без описания'}
                                     </div>
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                                      <span className="flex items-center gap-1">
+                                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                                      <span className="flex items-center gap-1 text-slate-400">
                                         <Clock size={12} />
                                         {new Date(metadata.timestamp).toLocaleString('ru-RU')}
                                       </span>
-                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
-                                        {metadata.method}
-                                      </span>
+                                      {metadata.method && (
+                                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded capitalize">
+                                          {metadata.method}
+                                        </span>
+                                      )}
                                       {metadata.emotion && (
-                                        <span className="text-slate-500">
-                                          Эмоция: {metadata.emotion}
+                                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
+                                          {metadata.emotion}
+                                        </span>
+                                      )}
+                                      {metadata.recurring && (
+                                        <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">
+                                          Повторяющийся
                                         </span>
                                       )}
                                     </div>
                                   </div>
                                 </div>
+                                {metadata.life_situation && (
+                                  <div className="text-sm text-slate-400 mt-2 line-clamp-1">
+                                    Ситуация: {metadata.life_situation}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -566,8 +601,10 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                 {balanceAction === 'credit' ? 'Пополнить баланс' : 'Списать с баланса'}
               </h3>
               <button
+                type="button"
                 onClick={() => setShowBalanceModal(false)}
                 className="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors"
+                aria-label="Закрыть модальное окно"
               >
                 <X size={18} className="text-white" />
               </button>
@@ -600,6 +637,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
 
               <div className="flex gap-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => setShowBalanceModal(false)}
                   disabled={processing}
                   className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-xl transition-colors"
@@ -607,6 +645,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate }) =
                   Отмена
                 </button>
                 <button
+                  type="button"
                   onClick={handleBalanceAdjustment}
                   disabled={processing}
                   className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white rounded-xl transition-colors flex items-center justify-center gap-2"

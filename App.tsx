@@ -386,6 +386,7 @@ function App() {
               onNavigate={navigateTo}
               currentView={adminSubView}
               onViewChange={setAdminSubView}
+              onViewDream={handleViewDream}
             />
           )}
         </div>
