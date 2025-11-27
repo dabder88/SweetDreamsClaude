@@ -197,6 +197,7 @@ export const checkAndPromoteAdmin = async (email: string): Promise<boolean> => {
 export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
   try {
     // Call RPC function to get all users (admin only)
+    // This function now returns is_admin flag directly, bypassing RLS
     const { data, error } = await supabase.rpc('get_all_users');
 
     if (error) {
@@ -205,6 +206,7 @@ export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
     }
 
     // Transform to User type
+    // Role is now determined by is_admin field from the RPC function
     const users: User[] = (data || []).map((u: any) => ({
       id: u.id,
       email: u.email,
@@ -213,21 +215,9 @@ export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
       avatar_url: u.raw_user_meta_data?.avatar_url,
       gender: u.raw_user_meta_data?.gender,
       date_of_birth: u.raw_user_meta_data?.date_of_birth,
-      privacy_hide_dreams: u.raw_user_meta_data?.privacy_hide_dreams || false
+      privacy_hide_dreams: u.raw_user_meta_data?.privacy_hide_dreams || false,
+      role: u.is_admin ? 'admin' : 'user' // Use is_admin from RPC result
     }));
-
-    // Get admin roles for all users
-    const { data: adminData } = await supabase
-      .from('admin_users')
-      .select('user_id')
-      .in('user_id', users.map(u => u.id));
-
-    const adminIds = new Set((adminData || []).map((a: any) => a.user_id));
-
-    // Add roles to users
-    users.forEach(user => {
-      user.role = adminIds.has(user.id) ? 'admin' : 'user';
-    });
 
     // Apply search filter (client-side for simplicity)
     let filteredUsers = users;
