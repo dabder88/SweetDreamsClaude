@@ -5,6 +5,37 @@
 -- Includes security checks, audit logging, and protection against removing last admin
 
 -- =====================================================
+-- Create audit_log table if it doesn't exist
+-- =====================================================
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action_type TEXT NOT NULL,
+  target_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  details JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS idx_audit_log_admin_id ON audit_log(admin_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_target_user_id ON audit_log(target_user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action_type ON audit_log(action_type);
+
+-- Enable Row Level Security
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: Only admins can view audit logs
+CREATE POLICY IF NOT EXISTS "Admins can view all audit logs"
+  ON audit_log FOR SELECT
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+
+-- Only system (SECURITY DEFINER functions) can insert
+CREATE POLICY IF NOT EXISTS "System can insert audit logs"
+  ON audit_log FOR INSERT
+  WITH CHECK (true);
+
+-- =====================================================
 -- Drop existing functions if they exist (for idempotency)
 -- =====================================================
 DROP FUNCTION IF EXISTS promote_user_to_admin(UUID);
