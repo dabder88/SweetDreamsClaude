@@ -26,6 +26,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
   const setCurrentView = onViewChange || setLocalView;
 
   const [selectedUser, setSelectedUser] = useState<UserWithBalance | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Key to force refresh UserManagement
 
   const handleViewUser = (user: UserWithBalance) => {
     setSelectedUser(user);
@@ -42,15 +43,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
     setCurrentView('overview');
   };
 
+  const handleUserUpdate = () => {
+    // Force refresh UserManagement by incrementing key
+    setRefreshKey(prev => prev + 1);
+  };
+
   // Render user detail view
   if (currentView === 'user-detail' && selectedUser) {
     return (
       <UserDetail
         user={selectedUser}
         onBack={handleBackToUsers}
-        onUserUpdate={() => {
-          // Refresh logic if needed
-        }}
+        onUserUpdate={handleUserUpdate}
         onViewDream={onViewDream}
         currentAdminId={currentUser?.id}
       />
@@ -61,6 +65,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
   if (currentView === 'users') {
     return (
       <UserManagement
+        key={refreshKey}
         onViewUser={handleViewUser}
         onBack={handleBackToOverview}
       />
