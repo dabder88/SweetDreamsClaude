@@ -3,6 +3,7 @@ import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
 import AuditLog from './AuditLog';
+import AdminAnalytics from './AdminAnalytics';
 import type { User, JournalEntry } from '../types';
 import {
   getSystemStats,
@@ -123,6 +124,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
     );
   }
 
+  // Render analytics view
+  if (currentView === 'analytics') {
+    return (
+      <AdminAnalytics
+        onBack={handleBackToOverview}
+      />
+    );
+  }
+
   // Render overview (default)
   return (
     <div className="min-h-screen">
@@ -208,7 +218,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
 
         {/* Analytics */}
         <button
-          onClick={() => console.log('Navigate to Analytics')}
+          onClick={() => setCurrentView('analytics')}
           className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-emerald-500/50 transition-all text-left"
         >
           <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-emerald-500/30 transition-colors">

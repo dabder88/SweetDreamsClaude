@@ -7,8 +7,17 @@ import {
   Transaction,
   TransactionType,
   TransactionStatus,
-  UsageMetric
+  UsageMetric,
+  ActivityDataPoint,
+  MethodStats,
+  APISuccessStats,
+  TimeOfDayStats,
+  DayOfWeekStats,
+  DreamLengthStats,
+  AnalyticsPeriod,
+  PsychMethod
 } from '../types';
+import { PSYCH_METHODS } from '../constants';
 
 // Re-export types that are commonly used
 export { TransactionType, TransactionStatus };
@@ -1131,5 +1140,332 @@ export const demoteFromAdmin = async (userId: string): Promise<{ success: boolea
   } catch (err) {
     console.error('Error in demoteFromAdmin:', err);
     return { success: false, error: 'Ошибка при снятии роли администратора' };
+  }
+};
+
+// =====================================================
+// ANALYTICS FUNCTIONS
+// =====================================================
+
+/**
+ * Get user activity statistics by period
+ */
+export const getActivityByPeriod = async (
+  period: AnalyticsPeriod = 'month'
+): Promise<ActivityDataPoint[]> => {
+  try {
+    // Определяем временной диапазон
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      case 'all':
+      default:
+        startDate = new Date(0); // Начало эпохи Unix
+    }
+
+    // Получаем данные из analysis_metadata
+    const { data, error } = await supabase
+      .from('analysis_metadata')
+      .select('created_at, user_id')
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Группируем по дням
+    const groupedByDay = new Map<string, Set<string>>();
+
+    (data || []).forEach(item => {
+      const date = new Date(item.created_at);
+      const dateKey = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+      if (!groupedByDay.has(dateKey)) {
+        groupedByDay.set(dateKey, new Set());
+      }
+      groupedByDay.get(dateKey)!.add(item.user_id);
+    });
+
+    // Подсчитываем общее количество анализов
+    const analysisCountByDay = new Map<string, number>();
+    (data || []).forEach(item => {
+      const date = new Date(item.created_at);
+      const dateKey = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      analysisCountByDay.set(dateKey, (analysisCountByDay.get(dateKey) || 0) + 1);
+    });
+
+    // Преобразуем в массив
+    const result: ActivityDataPoint[] = Array.from(groupedByDay.entries()).map(([date, userIds]) => ({
+      date,
+      count: analysisCountByDay.get(date) || 0, // Общее количество анализов
+      users: userIds.size // Количество уникальных пользователей
+    }));
+
+    return result;
+  } catch (err) {
+    console.error('Error in getActivityByPeriod:', err);
+    return [];
+  }
+};
+
+/**
+ * Get method usage statistics
+ */
+export const getMethodUsageStats = async (): Promise<MethodStats[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_metadata')
+      .select('method');
+
+    if (error) throw error;
+
+    // Подсчитываем использование каждого метода
+    const methodCounts = new Map<PsychMethod, number>();
+    const total = (data || []).length;
+
+    (data || []).forEach(item => {
+      const method = item.method as PsychMethod;
+      methodCounts.set(method, (methodCounts.get(method) || 0) + 1);
+    });
+
+    // Преобразуем в массив с названиями и цветами из PSYCH_METHODS
+    const result: MethodStats[] = Array.from(methodCounts.entries()).map(([method, count]) => {
+      const methodInfo = PSYCH_METHODS.find(m => m.id === method);
+      return {
+        method,
+        methodName: methodInfo?.name || method,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0,
+        color: methodInfo?.color || 'text-slate-400'
+      };
+    });
+
+    // Сортируем по убыванию count
+    return result.sort((a, b) => b.count - a.count);
+  } catch (err) {
+    console.error('Error in getMethodUsageStats:', err);
+    return [];
+  }
+};
+
+/**
+ * Get API success rate statistics
+ */
+export const getAPISuccessRate = async (
+  period: AnalyticsPeriod = 'month'
+): Promise<APISuccessStats[]> => {
+  try {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      case 'all':
+      default:
+        startDate = new Date(0);
+    }
+
+    const { data, error } = await supabase
+      .from('usage_metrics')
+      .select('created_at, success')
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Группируем по дням
+    const groupedByDay = new Map<string, { total: number; successful: number }>();
+
+    (data || []).forEach(item => {
+      const date = new Date(item.created_at);
+      const dateKey = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+      if (!groupedByDay.has(dateKey)) {
+        groupedByDay.set(dateKey, { total: 0, successful: 0 });
+      }
+
+      const stats = groupedByDay.get(dateKey)!;
+      stats.total++;
+      if (item.success) stats.successful++;
+    });
+
+    // Преобразуем в массив
+    const result: APISuccessStats[] = Array.from(groupedByDay.entries()).map(([date, stats]) => ({
+      date,
+      total: stats.total,
+      successful: stats.successful,
+      failed: stats.total - stats.successful,
+      successRate: stats.total > 0 ? (stats.successful / stats.total) * 100 : 0
+    }));
+
+    return result;
+  } catch (err) {
+    console.error('Error in getAPISuccessRate:', err);
+    return [];
+  }
+};
+
+/**
+ * Get average dream length statistics
+ */
+export const getAverageDreamLength = async (): Promise<DreamLengthStats> => {
+  try {
+    const { data, error } = await supabase
+      .from('dream_entries')
+      .select('dream_data');
+
+    if (error) throw error;
+
+    const lengths: number[] = [];
+
+    (data || []).forEach(item => {
+      try {
+        const dreamData = typeof item.dream_data === 'string'
+          ? JSON.parse(item.dream_data)
+          : item.dream_data;
+
+        if (dreamData?.description) {
+          lengths.push(dreamData.description.length);
+        }
+      } catch (err) {
+        console.error('Error parsing dream_data:', err);
+      }
+    });
+
+    if (lengths.length === 0) {
+      return { average: 0, median: 0, min: 0, max: 0, total: 0 };
+    }
+
+    const sorted = [...lengths].sort((a, b) => a - b);
+    const average = lengths.reduce((sum, len) => sum + len, 0) / lengths.length;
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+
+    return {
+      average: Math.round(average),
+      median,
+      min,
+      max,
+      total: lengths.length
+    };
+  } catch (err) {
+    console.error('Error in getAverageDreamLength:', err);
+    return { average: 0, median: 0, min: 0, max: 0, total: 0 };
+  }
+};
+
+/**
+ * Get usage statistics by time of day (hourly)
+ */
+export const getUsageByTimeOfDay = async (): Promise<TimeOfDayStats[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_metadata')
+      .select('created_at');
+
+    if (error) throw error;
+
+    // Группируем по часам
+    const hourCounts = new Map<number, number>();
+
+    // Инициализируем все часы нулями
+    for (let i = 0; i < 24; i++) {
+      hourCounts.set(i, 0);
+    }
+
+    (data || []).forEach(item => {
+      const date = new Date(item.created_at);
+      const hour = date.getHours();
+      hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+    });
+
+    // Преобразуем в массив
+    const result: TimeOfDayStats[] = Array.from(hourCounts.entries()).map(([hour, count]) => ({
+      hour,
+      hourLabel: `${hour.toString().padStart(2, '0')}:00`,
+      count
+    }));
+
+    return result.sort((a, b) => a.hour - b.hour);
+  } catch (err) {
+    console.error('Error in getUsageByTimeOfDay:', err);
+    return [];
+  }
+};
+
+/**
+ * Get usage statistics by day of week
+ */
+export const getUsageByDayOfWeek = async (): Promise<DayOfWeekStats[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_metadata')
+      .select('created_at');
+
+    if (error) throw error;
+
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    // Группируем по дням недели
+    const dayCounts = new Map<number, number>();
+
+    // Инициализируем все дни нулями
+    for (let i = 0; i < 7; i++) {
+      dayCounts.set(i, 0);
+    }
+
+    (data || []).forEach(item => {
+      const date = new Date(item.created_at);
+      const day = date.getDay(); // 0-6 (воскресенье-суббота)
+      dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
+    });
+
+    // Преобразуем в массив, начиная с понедельника
+    const result: DayOfWeekStats[] = [];
+
+    // Сначала Пн-Сб (1-6)
+    for (let i = 1; i < 7; i++) {
+      result.push({
+        day: i,
+        dayName: dayNames[i],
+        count: dayCounts.get(i) || 0
+      });
+    }
+
+    // Затем воскресенье (0)
+    result.push({
+      day: 0,
+      dayName: dayNames[0],
+      count: dayCounts.get(0) || 0
+    });
+
+    return result;
+  } catch (err) {
+    console.error('Error in getUsageByDayOfWeek:', err);
+    return [];
   }
 };

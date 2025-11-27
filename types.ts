@@ -204,3 +204,51 @@ export interface UserSubscription {
   auto_renew: boolean;
   created_at: string;
 }
+
+// =====================================================
+// ANALYTICS TYPES (для AdminAnalytics компонента)
+// =====================================================
+
+export interface ActivityDataPoint {
+  date: string;        // 'DD.MM' или 'DD MMM'
+  count: number;       // Количество анализов
+  users: number;       // Количество уникальных пользователей
+}
+
+export interface MethodStats {
+  method: PsychMethod;
+  methodName: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export interface APISuccessStats {
+  date: string;
+  total: number;
+  successful: number;
+  failed: number;
+  successRate: number; // В процентах
+}
+
+export interface TimeOfDayStats {
+  hour: number;        // 0-23
+  hourLabel: string;   // '00:00-01:00'
+  count: number;
+}
+
+export interface DayOfWeekStats {
+  day: number;         // 0-6 (воскресенье-суббота)
+  dayName: string;     // 'Пн', 'Вт', ...
+  count: number;
+}
+
+export interface DreamLengthStats {
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  total: number;
+}
+
+export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year' | 'all';
