@@ -70,6 +70,7 @@ export const signUp = async (email: string, password: string): Promise<AuthRespo
           avatar_url: data.user.user_metadata?.avatar_url,
           gender: data.user.user_metadata?.gender,
           date_of_birth: data.user.user_metadata?.date_of_birth,
+          privacy_hide_dreams: data.user.user_metadata?.privacy_hide_dreams || false,
         },
         error: null,
       };
@@ -114,6 +115,7 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
           avatar_url: data.user.user_metadata?.avatar_url,
           gender: data.user.user_metadata?.gender,
           date_of_birth: data.user.user_metadata?.date_of_birth,
+          privacy_hide_dreams: data.user.user_metadata?.privacy_hide_dreams || false,
           role,
           balance: balanceData?.balance,
         },
@@ -164,6 +166,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         avatar_url: user.user_metadata?.avatar_url,
         gender: user.user_metadata?.gender,
         date_of_birth: user.user_metadata?.date_of_birth,
+        privacy_hide_dreams: user.user_metadata?.privacy_hide_dreams || false,
         role,
         balance: balanceData?.balance,
       };
@@ -196,6 +199,7 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
         avatar_url: session.user.user_metadata?.avatar_url,
         gender: session.user.user_metadata?.gender,
         date_of_birth: session.user.user_metadata?.date_of_birth,
+        privacy_hide_dreams: session.user.user_metadata?.privacy_hide_dreams || false,
         role,
         balance: balanceData?.balance,
       });
@@ -255,13 +259,14 @@ export const updateEmail = async (newEmail: string): Promise<{ error: AuthError 
 };
 
 /**
- * Update user metadata (name, avatar_url, gender, date_of_birth, etc.)
+ * Update user metadata (name, avatar_url, gender, date_of_birth, privacy_hide_dreams, etc.)
  */
 export const updateUserMetadata = async (metadata: {
   name?: string;
   avatar_url?: string;
   gender?: 'male' | 'female';
   date_of_birth?: string;
+  privacy_hide_dreams?: boolean;
 }): Promise<{ error: AuthError | null }> => {
   try {
     const { error } = await supabase.auth.updateUser({

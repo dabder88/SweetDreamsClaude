@@ -9,6 +9,7 @@ interface AdminPanelProps {
   currentView?: string; // Current sub-view from App.tsx
   onViewChange?: (view: string) => void; // Callback to change view
   onViewDream?: (entry: JournalEntry) => void; // Callback to view dream details
+  currentUser?: User; // Current logged-in admin
 }
 
 interface UserWithBalance extends User {
@@ -18,7 +19,7 @@ interface UserWithBalance extends User {
 
 type AdminView = 'overview' | 'users' | 'user-detail' | 'finances' | 'analytics' | 'audit';
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange, onViewDream }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange, onViewDream, currentUser }) => {
   // Use prop view if provided, otherwise use local state
   const [localView, setLocalView] = useState<AdminView>('overview');
   const currentView = (propView as AdminView) || localView;
@@ -51,6 +52,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
           // Refresh logic if needed
         }}
         onViewDream={onViewDream}
+        currentAdminId={currentUser?.id}
       />
     );
   }

@@ -29,6 +29,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [clearingData, setClearingData] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   // Profile editing states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -539,6 +540,48 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       setEmailError('Ошибка смены email');
     } finally {
       setSavingEmail(false);
+    }
+  };
+
+  const handleTogglePrivacy = async () => {
+    if (!user || user.role !== 'admin') return;
+
+    setSavingPrivacy(true);
+    try {
+      const newPrivacyValue = !user.privacy_hide_dreams;
+      const { error } = await updateUserMetadata({
+        privacy_hide_dreams: newPrivacyValue
+      });
+
+      if (error) {
+        alert(error.message);
+        setSavingPrivacy(false);
+        return;
+      }
+
+      // Force session refresh to get updated metadata
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+      if (refreshError) {
+        console.error('Failed to refresh session:', refreshError);
+      }
+
+      // Get updated user data
+      const updatedUser = await getCurrentUser();
+      if (updatedUser) {
+        onUserUpdate(updatedUser);
+      }
+
+      if (newPrivacyValue) {
+        alert('✅ История снов скрыта от других администраторов');
+      } else {
+        alert('✅ История снов теперь видна администраторам');
+      }
+    } catch (e) {
+      console.error('Privacy toggle error:', e);
+      alert('Ошибка изменения настроек приватности');
+    } finally {
+      setSavingPrivacy(false);
     }
   };
 
@@ -1054,14 +1097,58 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
 
           {/* Security Info */}
           <TiltCard className="glass-panel p-6 rounded-xl bg-slate-900/40 border border-slate-700/30">
-              <div className="flex items-start gap-3">
-                 <Shield size={20} className="text-emerald-400 mt-1"/>
-                 <div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Shield size={20} className="text-emerald-400 mt-1"/>
+                  <div>
                     <h4 className="text-slate-200 font-medium text-sm">Безопасность данных</h4>
                     <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                       Ваши сны защищены Row Level Security в Supabase. Только вы имеете доступ к своим записям.
+                      Ваши сны защищены Row Level Security в Supabase. Только вы имеете доступ к своим записям.
                     </p>
-                 </div>
+                  </div>
+                </div>
+
+                {/* Privacy Toggle for Admins */}
+                {user?.role === 'admin' && (
+                  <div className="pt-4 border-t border-slate-700/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="text-slate-200 font-medium text-sm flex items-center gap-2">
+                          <Lock size={16} className="text-purple-400"/>
+                          Приватность админа
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                          Скрыть историю снов и аналитику от других администраторов
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleTogglePrivacy}
+                        disabled={savingPrivacy}
+                        aria-label="Переключить приватность снов"
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                          user.privacy_hide_dreams
+                            ? 'bg-purple-600'
+                            : 'bg-slate-600'
+                        } ${savingPrivacy ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            user.privacy_hide_dreams ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    {user.privacy_hide_dreams && (
+                      <div className="mt-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                        <p className="text-xs text-purple-300 flex items-center gap-2">
+                          <Check size={12} />
+                          Ваша история снов скрыта от других админов
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
           </TiltCard>
 

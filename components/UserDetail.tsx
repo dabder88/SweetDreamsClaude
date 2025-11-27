@@ -17,7 +17,8 @@ import {
   X,
   BarChart3,
   FileText,
-  Clock
+  Clock,
+  Lock
 } from 'lucide-react';
 import {
   getUserTransactions,
@@ -39,9 +40,10 @@ interface UserDetailProps {
   onBack: () => void;
   onUserUpdate?: () => void;
   onViewDream?: (entry: JournalEntry) => void;
+  currentAdminId?: string; // ID текущего просматривающего админа
 }
 
-const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onViewDream }) => {
+const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onViewDream, currentAdminId }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -56,6 +58,9 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
   const [dreamEntries, setDreamEntries] = useState<JournalEntry[]>([]);
   const [loadingDreams, setLoadingDreams] = useState(false);
   const [activeTab, setActiveTab] = useState<'transactions' | 'dreams' | 'analytics'>('transactions');
+
+  // Check if dream data should be hidden due to privacy settings
+  const isDreamDataHidden = user.privacy_hide_dreams && currentAdminId && user.id !== currentAdminId;
 
   useEffect(() => {
     loadTransactions();
@@ -321,30 +326,34 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
                 <TrendingUp size={18} />
                 <span className="font-medium">Транзакции</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('dreams')}
-                className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'dreams'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
-                }`}
-              >
-                <BookOpen size={18} />
-                <span className="font-medium">История снов</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('analytics')}
-                className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'analytics'
-                    ? 'bg-green-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
-                }`}
-              >
-                <BarChart3 size={18} />
-                <span className="font-medium">Аналитика</span>
-              </button>
+              {!isDreamDataHidden && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('dreams')}
+                    className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === 'dreams'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen size={18} />
+                    <span className="font-medium">История снов</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('analytics')}
+                    className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === 'analytics'
+                        ? 'bg-green-600 text-white'
+                        : 'text-slate-400 hover:bg-slate-700/30 hover:text-white'
+                    }`}
+                  >
+                    <BarChart3 size={18} />
+                    <span className="font-medium">Аналитика</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Tab Content */}
@@ -389,7 +398,17 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
               {/* Dreams Tab */}
               {activeTab === 'dreams' && (
                 <div className="space-y-4">
-                  {loadingDreams ? (
+                  {isDreamDataHidden ? (
+                    <div className="text-center py-12 px-4">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 mb-4">
+                        <Lock className="w-8 h-8 text-purple-400" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-white mb-2">Данные скрыты</h4>
+                      <p className="text-slate-400 max-w-md mx-auto">
+                        Этот администратор скрыл свою историю снов от других админов в настройках приватности
+                      </p>
+                    </div>
+                  ) : loadingDreams ? (
                     <div className="text-center py-8 text-slate-400">Загрузка...</div>
                   ) : (
                     <>
@@ -523,67 +542,81 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
               {/* Analytics Tab */}
               {activeTab === 'analytics' && (
                 <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-white mb-3">Статистика пользователя</h4>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                      <div className="text-sm text-slate-400 mb-1">Всего анализов</div>
-                      <div className="text-2xl font-bold text-white">{analysisMetadata.length}</div>
+                  {isDreamDataHidden ? (
+                    <div className="text-center py-12 px-4">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 mb-4">
+                        <Lock className="w-8 h-8 text-purple-400" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-white mb-2">Данные скрыты</h4>
+                      <p className="text-slate-400 max-w-md mx-auto">
+                        Этот администратор скрыл свою аналитику снов от других админов в настройках приватности
+                      </p>
                     </div>
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                      <div className="text-sm text-slate-400 mb-1">Сохранено в журнал</div>
-                      <div className="text-2xl font-bold text-white">{dreamEntries.length}</div>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <h4 className="text-lg font-semibold text-white mb-3">Статистика пользователя</h4>
 
-                  {analysisMetadata.length > 0 && (
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                      <div className="text-sm text-slate-400 mb-3">Методы анализа</div>
-                      <div className="space-y-2">
-                        {Object.entries(
-                          analysisMetadata.reduce((acc, m) => {
-                            acc[m.method] = (acc[m.method] || 0) + 1;
-                            return acc;
-                          }, {} as Record<string, number>)
-                        ).map(([method, count]) => (
-                          <div key={method} className="flex items-center justify-between">
-                            <span className="text-white capitalize">{method}</span>
-                            <span className="text-slate-400">{count} раз</span>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                          <div className="text-sm text-slate-400 mb-1">Всего анализов</div>
+                          <div className="text-2xl font-bold text-white">{analysisMetadata.length}</div>
+                        </div>
+                        <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                          <div className="text-sm text-slate-400 mb-1">Сохранено в журнал</div>
+                          <div className="text-2xl font-bold text-white">{dreamEntries.length}</div>
+                        </div>
+                      </div>
+
+                      {analysisMetadata.length > 0 && (
+                        <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                          <div className="text-sm text-slate-400 mb-3">Методы анализа</div>
+                          <div className="space-y-2">
+                            {Object.entries(
+                              analysisMetadata.reduce((acc, m) => {
+                                acc[m.method] = (acc[m.method] || 0) + 1;
+                                return acc;
+                              }, {} as Record<string, number>)
+                            ).map(([method, count]) => (
+                              <div key={method} className="flex items-center justify-between">
+                                <span className="text-white capitalize">{method}</span>
+                                <span className="text-slate-400">{count} раз</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
 
-                  {analysisMetadata.length > 0 && (
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                      <div className="text-sm text-slate-400 mb-3">Частые эмоции</div>
-                      <div className="space-y-2">
-                        {Object.entries(
-                          analysisMetadata
-                            .filter(m => m.emotion)
-                            .reduce((acc, m) => {
-                              acc[m.emotion] = (acc[m.emotion] || 0) + 1;
-                              return acc;
-                            }, {} as Record<string, number>)
-                        )
-                          .sort((a, b) => b[1] - a[1])
-                          .slice(0, 5)
-                          .map(([emotion, count]) => (
-                            <div key={emotion} className="flex items-center justify-between">
-                              <span className="text-white">{emotion}</span>
-                              <span className="text-slate-400">{count} раз</span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
+                      {analysisMetadata.length > 0 && (
+                        <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                          <div className="text-sm text-slate-400 mb-3">Частые эмоции</div>
+                          <div className="space-y-2">
+                            {Object.entries(
+                              analysisMetadata
+                                .filter(m => m.emotion)
+                                .reduce((acc, m) => {
+                                  acc[m.emotion] = (acc[m.emotion] || 0) + 1;
+                                  return acc;
+                                }, {} as Record<string, number>)
+                            )
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 5)
+                              .map(([emotion, count]) => (
+                                <div key={emotion} className="flex items-center justify-between">
+                                  <span className="text-white">{emotion}</span>
+                                  <span className="text-slate-400">{count} раз</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {analysisMetadata.length === 0 && (
-                    <div className="text-center py-8 text-slate-400">
-                      <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-                      <p>Недостаточно данных для аналитики</p>
-                    </div>
+                      {analysisMetadata.length === 0 && (
+                        <div className="text-center py-8 text-slate-400">
+                          <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+                          <p>Недостаточно данных для аналитики</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

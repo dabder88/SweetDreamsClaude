@@ -212,7 +212,8 @@ export const getAllUsers = async (filters?: UserFilters): Promise<User[]> => {
       name: u.raw_user_meta_data?.name,
       avatar_url: u.raw_user_meta_data?.avatar_url,
       gender: u.raw_user_meta_data?.gender,
-      date_of_birth: u.raw_user_meta_data?.date_of_birth
+      date_of_birth: u.raw_user_meta_data?.date_of_birth,
+      privacy_hide_dreams: u.raw_user_meta_data?.privacy_hide_dreams || false
     }));
 
     // Get admin roles for all users

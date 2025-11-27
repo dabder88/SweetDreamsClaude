@@ -48,6 +48,7 @@ export interface User {
   date_of_birth?: string; // ISO date string (YYYY-MM-DD)
   role?: 'user' | 'admin'; // User role for access control
   balance?: number; // Current balance (for monetization)
+  privacy_hide_dreams?: boolean; // Hide dream history from other admins (admin only)
 }
 
 export interface JournalEntry {

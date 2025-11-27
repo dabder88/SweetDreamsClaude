@@ -387,6 +387,7 @@ function App() {
               currentView={adminSubView}
               onViewChange={setAdminSubView}
               onViewDream={handleViewDream}
+              currentUser={user}
             />
           )}
         </div>
