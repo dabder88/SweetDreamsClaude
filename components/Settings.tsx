@@ -546,31 +546,33 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
   const handleTogglePrivacy = async () => {
     if (!user || user.role !== 'admin') return;
 
+    const newPrivacyValue = !user.privacy_hide_dreams;
+
+    // Optimistically update UI immediately
+    onUserUpdate({
+      ...user,
+      privacy_hide_dreams: newPrivacyValue
+    });
+
     setSavingPrivacy(true);
     try {
-      const newPrivacyValue = !user.privacy_hide_dreams;
       const { error } = await updateUserMetadata({
         privacy_hide_dreams: newPrivacyValue
       });
 
       if (error) {
+        // Revert on error
+        onUserUpdate({
+          ...user,
+          privacy_hide_dreams: !newPrivacyValue
+        });
         alert(error.message);
         setSavingPrivacy(false);
         return;
       }
 
-      // Force session refresh to get updated metadata
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-
-      if (refreshError) {
-        console.error('Failed to refresh session:', refreshError);
-      }
-
-      // Get updated user data
-      const updatedUser = await getCurrentUser();
-      if (updatedUser) {
-        onUserUpdate(updatedUser);
-      }
+      // Force session refresh to sync with backend
+      await supabase.auth.refreshSession();
 
       if (newPrivacyValue) {
         alert('✅ История снов скрыта от других администраторов');
@@ -579,6 +581,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       }
     } catch (e) {
       console.error('Privacy toggle error:', e);
+      // Revert on error
+      onUserUpdate({
+        ...user,
+        privacy_hide_dreams: !newPrivacyValue
+      });
       alert('Ошибка изменения настроек приватности');
     } finally {
       setSavingPrivacy(false);
