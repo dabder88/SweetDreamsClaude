@@ -195,6 +195,8 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
                 <option value="BALANCE_DEBITED">Списание баланса</option>
                 <option value="SETTINGS_UPDATED">Обновление настроек</option>
                 <option value="PROVIDER_CHANGED">Изменение провайдера</option>
+                <option value="LOGIN">Вход в систему</option>
+                <option value="LOGOUT">Выход из системы</option>
               </select>
             </div>
 

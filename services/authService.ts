@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
-import { User } from '../types';
-import { getUserRole, checkAndPromoteAdmin, getUserBalance } from './adminService';
+import { User, AdminActionType } from '../types';
+import { getUserRole, checkAndPromoteAdmin, getUserBalance, logAdminAction } from './adminService';
 
 export interface AuthError {
   message: string;
@@ -106,6 +106,14 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
       // Get user balance
       const balanceData = await getUserBalance(data.user.id);
 
+      // Log admin login
+      if (role === 'admin') {
+        await logAdminAction(AdminActionType.LOGIN, {
+          email: data.user.email,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       return {
         user: {
           id: data.user.id,
@@ -134,6 +142,21 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
  */
 export const signOut = async (): Promise<{ error: AuthError | null }> => {
   try {
+    // Get current user before logout to log admin logout
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const role = await getUserRole(user.id);
+
+      // Log admin logout
+      if (role === 'admin') {
+        await logAdminAction(AdminActionType.LOGOUT, {
+          email: user.email,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       return { error: { message: translateAuthError(error.message) } };
