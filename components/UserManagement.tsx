@@ -5,6 +5,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eye,
   DollarSign,
   Ban,
@@ -25,7 +26,8 @@ import type { User } from '../types';
 
 interface UserWithBalance extends User {
   balance?: number;
-  dreamCount?: number;
+  dreamCount?: number; // Сны в журнале (dream_entries)
+  totalDreams?: number; // Все проанализированные сны (analysis_metadata)
 }
 
 interface UserManagementProps {
@@ -33,7 +35,7 @@ interface UserManagementProps {
   onBack?: () => void; // Optional back button callback
 }
 
-type SortField = 'name' | 'email' | 'role' | 'balance' | 'created_at';
+type SortField = 'name' | 'email' | 'role' | 'balance' | 'dreamCount' | 'totalDreams' | 'created_at';
 type SortDirection = 'asc' | 'desc' | null;
 
 const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) => {
@@ -50,7 +52,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
   });
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+
+  // Расширенные фильтры
+  const [advancedFilters, setAdvancedFilters] = useState({
+    userName: '',
+    userEmail: '',
+    balanceFrom: '',
+    balanceTo: '',
+    totalDreamsFrom: '',
+    totalDreamsTo: '',
+    journalDreamsFrom: '',
+    journalDreamsTo: ''
+  });
 
   const usersPerPage = 20;
 
@@ -78,16 +91,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
         fetchedUsers.map(async (user) => {
           const balanceData = await getUserBalance(user.id);
 
-          // Count dreams from dream_entries table
+          // Count dreams from dream_entries table (журнал)
           const { count: dreamCount } = await supabase
             .from('dream_entries')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
+          // Count all analyzed dreams from analysis_metadata table (все сны)
+          const { count: totalDreams } = await supabase
+            .from('analysis_metadata')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id);
 
           return {
             ...user,
             balance: balanceData?.balance || 0,
-            dreamCount: dreamCount || 0
+            dreamCount: dreamCount || 0,
+            totalDreams: totalDreams || 0
           };
         })
       );
@@ -126,38 +146,54 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     }
   };
 
-  const handleColumnFilter = (column: string, value: string) => {
-    setColumnFilters(prev => ({
-      ...prev,
-      [column]: value
-    }));
-    setCurrentPage(1);
-  };
-
   // Filtered and sorted users
   const processedUsers = useMemo(() => {
     let result = [...users];
 
-    // Apply column filters
-    Object.entries(columnFilters).forEach(([column, filterValue]) => {
-      if (!filterValue) return;
+    // Apply advanced filters
+    if (advancedFilters.userName) {
+      const lowerFilter = advancedFilters.userName.toLowerCase();
+      result = result.filter(user =>
+        (user.name || user.email).toLowerCase().includes(lowerFilter)
+      );
+    }
 
-      const lowerFilter = filterValue.toLowerCase();
-      result = result.filter(user => {
-        switch (column) {
-          case 'name':
-            return (user.name || user.email).toLowerCase().includes(lowerFilter);
-          case 'email':
-            return user.email.toLowerCase().includes(lowerFilter);
-          case 'role':
-            return (user.role || 'user').toLowerCase().includes(lowerFilter);
-          case 'balance':
-            return (user.balance?.toString() || '0').includes(filterValue);
-          default:
-            return true;
-        }
-      });
-    });
+    if (advancedFilters.userEmail) {
+      const lowerFilter = advancedFilters.userEmail.toLowerCase();
+      result = result.filter(user =>
+        user.email.toLowerCase().includes(lowerFilter)
+      );
+    }
+
+    // Balance range filter
+    if (advancedFilters.balanceFrom) {
+      const minBalance = parseFloat(advancedFilters.balanceFrom);
+      result = result.filter(user => (user.balance || 0) >= minBalance);
+    }
+    if (advancedFilters.balanceTo) {
+      const maxBalance = parseFloat(advancedFilters.balanceTo);
+      result = result.filter(user => (user.balance || 0) <= maxBalance);
+    }
+
+    // Total dreams range filter
+    if (advancedFilters.totalDreamsFrom) {
+      const minDreams = parseInt(advancedFilters.totalDreamsFrom);
+      result = result.filter(user => (user.totalDreams || 0) >= minDreams);
+    }
+    if (advancedFilters.totalDreamsTo) {
+      const maxDreams = parseInt(advancedFilters.totalDreamsTo);
+      result = result.filter(user => (user.totalDreams || 0) <= maxDreams);
+    }
+
+    // Journal dreams range filter
+    if (advancedFilters.journalDreamsFrom) {
+      const minJournal = parseInt(advancedFilters.journalDreamsFrom);
+      result = result.filter(user => (user.dreamCount || 0) >= minJournal);
+    }
+    if (advancedFilters.journalDreamsTo) {
+      const maxJournal = parseInt(advancedFilters.journalDreamsTo);
+      result = result.filter(user => (user.dreamCount || 0) <= maxJournal);
+    }
 
     // Apply sorting
     if (sortField && sortDirection) {
@@ -182,6 +218,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
             aVal = a.balance || 0;
             bVal = b.balance || 0;
             break;
+          case 'dreamCount':
+            aVal = a.dreamCount || 0;
+            bVal = b.dreamCount || 0;
+            break;
+          case 'totalDreams':
+            aVal = a.totalDreams || 0;
+            bVal = b.totalDreams || 0;
+            break;
           case 'created_at':
             aVal = new Date(a.created_at).getTime();
             bVal = new Date(b.created_at).getTime();
@@ -197,7 +241,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     }
 
     return result;
-  }, [users, columnFilters, sortField, sortDirection]);
+  }, [users, advancedFilters, sortField, sortDirection]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -228,31 +272,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     return <ArrowDown size={14} className="text-blue-400" />;
   };
 
-  const SortableHeader: React.FC<{ field: SortField; label: string; showFilter?: boolean }> = ({
-    field,
-    label,
-    showFilter = false
-  }) => (
+  const SortableHeader: React.FC<{ field: SortField; label: string }> = ({ field, label }) => (
     <th className="px-6 py-4 text-left">
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => handleSort(field)}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-400 uppercase tracking-wider hover:text-blue-400 transition-colors"
-        >
-          {label}
-          {getSortIcon(field)}
-        </button>
-        {showFilter && (
-          <input
-            type="text"
-            value={columnFilters[field] || ''}
-            onChange={(e) => handleColumnFilter(field, e.target.value)}
-            placeholder={`Фильтр...`}
-            className="w-full px-2 py-1 text-xs bg-slate-900/50 border border-slate-700 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-          />
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className="flex items-center gap-2 text-sm font-semibold text-slate-400 uppercase tracking-wider hover:text-blue-400 transition-colors"
+      >
+        {label}
+        {getSortIcon(field)}
+      </button>
     </th>
   );
 
@@ -311,13 +340,47 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
           </button>
         </form>
 
-        {/* Filter Panel */}
+        {/* Advanced Filter Panel */}
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-slate-700">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* User Name Filter */}
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Роль</label>
+                <label htmlFor="filter-username" className="block text-sm text-slate-400 mb-2">
+                  Пользователь
+                </label>
+                <input
+                  id="filter-username"
+                  type="text"
+                  value={advancedFilters.userName}
+                  onChange={(e) => setAdvancedFilters({ ...advancedFilters, userName: e.target.value })}
+                  placeholder="Имя или email..."
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Email Filter */}
+              <div>
+                <label htmlFor="filter-email" className="block text-sm text-slate-400 mb-2">
+                  E-mail
+                </label>
+                <input
+                  id="filter-email"
+                  type="text"
+                  value={advancedFilters.userEmail}
+                  onChange={(e) => setAdvancedFilters({ ...advancedFilters, userEmail: e.target.value })}
+                  placeholder="Email..."
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div>
+                <label htmlFor="filter-role" className="block text-sm text-slate-400 mb-2">
+                  Роль
+                </label>
                 <select
+                  id="filter-role"
                   value={filters.role || ''}
                   onChange={(e) => setFilters({ ...filters, role: e.target.value as 'admin' | 'user' | undefined })}
                   className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
@@ -327,9 +390,83 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                   <option value="admin">Администратор</option>
                 </select>
               </div>
+
+              {/* Balance Range */}
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Дата регистрации (от)</label>
+                <label className="block text-sm text-slate-400 mb-2">Баланс</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={advancedFilters.balanceFrom}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, balanceFrom: e.target.value })}
+                    placeholder="От"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Баланс от"
+                  />
+                  <input
+                    type="number"
+                    value={advancedFilters.balanceTo}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, balanceTo: e.target.value })}
+                    placeholder="До"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Баланс до"
+                  />
+                </div>
+              </div>
+
+              {/* Total Dreams Range */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Сны (всего)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={advancedFilters.totalDreamsFrom}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, totalDreamsFrom: e.target.value })}
+                    placeholder="От"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Сны от"
+                  />
+                  <input
+                    type="number"
+                    value={advancedFilters.totalDreamsTo}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, totalDreamsTo: e.target.value })}
+                    placeholder="До"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Сны до"
+                  />
+                </div>
+              </div>
+
+              {/* Journal Dreams Range */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Журнал</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={advancedFilters.journalDreamsFrom}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, journalDreamsFrom: e.target.value })}
+                    placeholder="От"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Журнал от"
+                  />
+                  <input
+                    type="number"
+                    value={advancedFilters.journalDreamsTo}
+                    onChange={(e) => setAdvancedFilters({ ...advancedFilters, journalDreamsTo: e.target.value })}
+                    placeholder="До"
+                    className="w-1/2 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    aria-label="Журнал до"
+                  />
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div>
+                <label htmlFor="filter-date-from" className="block text-sm text-slate-400 mb-2">
+                  Дата регистрации (от)
+                </label>
                 <input
+                  id="filter-date-from"
                   type="date"
                   value={filters.createdAfter || ''}
                   onChange={(e) => setFilters({ ...filters, createdAfter: e.target.value || undefined })}
@@ -337,14 +474,40 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                 />
               </div>
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Дата регистрации (до)</label>
+                <label htmlFor="filter-date-to" className="block text-sm text-slate-400 mb-2">
+                  Дата регистрации (до)
+                </label>
                 <input
+                  id="filter-date-to"
                   type="date"
                   value={filters.createdBefore || ''}
                   onChange={(e) => setFilters({ ...filters, createdBefore: e.target.value || undefined })}
                   className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdvancedFilters({
+                    userName: '',
+                    userEmail: '',
+                    balanceFrom: '',
+                    balanceTo: '',
+                    totalDreamsFrom: '',
+                    totalDreamsTo: '',
+                    journalDreamsFrom: '',
+                    journalDreamsTo: ''
+                  });
+                  setFilters({ ...filters, role: undefined, createdAfter: undefined, createdBefore: undefined });
+                }}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors"
+              >
+                Сбросить фильтры
+              </button>
             </div>
           </div>
         )}
@@ -372,13 +535,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700/50">
-                  <SortableHeader field="name" label="Пользователь" showFilter />
-                  <SortableHeader field="email" label="Email" showFilter />
-                  <SortableHeader field="role" label="Роль" showFilter />
-                  <SortableHeader field="balance" label="Баланс" showFilter />
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    Сны
-                  </th>
+                  <SortableHeader field="name" label="Пользователь" />
+                  <SortableHeader field="email" label="Email" />
+                  <SortableHeader field="role" label="Роль" />
+                  <SortableHeader field="balance" label="Баланс" />
+                  <SortableHeader field="totalDreams" label="Сны" />
+                  <SortableHeader field="dreamCount" label="Журнал" />
                   <SortableHeader field="created_at" label="Регистрация" />
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-400 uppercase tracking-wider">
                     Действия
@@ -427,6 +589,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-purple-400 font-medium">
                         <BookOpen size={16} />
+                        {user.totalDreams || 0}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-green-400 font-medium">
+                        <BookOpen size={16} />
                         {user.dreamCount || 0}
                       </div>
                     </td>
@@ -438,6 +606,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                     </td>
                     <td className="px-6 py-4">
                       <button
+                        type="button"
                         onClick={() => onViewUser(user)}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
                       >
@@ -468,6 +637,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
               </div>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                   className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition-colors flex items-center gap-2"
@@ -476,6 +646,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
                   Назад
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition-colors flex items-center gap-2"
