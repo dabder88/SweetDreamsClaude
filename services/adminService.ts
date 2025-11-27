@@ -812,13 +812,12 @@ export const logAdminAction = async (
     if (!user) return;
 
     await supabase
-      .from('admin_audit_log')
+      .from('audit_log')
       .insert({
         admin_id: user.id,
         action_type: actionType,
         target_user_id: details.target_user_id,
-        details,
-        ip_address: null // TODO: Get IP address if needed
+        details
       });
   } catch (err) {
     console.error('Error logging admin action:', err);
@@ -831,7 +830,7 @@ export const logAdminAction = async (
 export const getAuditLogs = async (filters?: LogFilters): Promise<AuditLogEntry[]> => {
   try {
     let query = supabase
-      .from('admin_audit_log')
+      .from('audit_log')
       .select('*');
 
     if (filters?.adminId) {
@@ -860,7 +859,20 @@ export const getAuditLogs = async (filters?: LogFilters): Promise<AuditLogEntry[
       return [];
     }
 
-    return data as AuditLogEntry[] || [];
+    const logs = data as AuditLogEntry[] || [];
+
+    // Enrich logs with admin emails
+    const { data: allUsers } = await supabase.rpc('get_all_users');
+    const userMap = new Map((allUsers || []).map((u: any) => [u.id, u.email]));
+
+    return logs.map(log => ({
+      ...log,
+      details: {
+        ...log.details,
+        admin_email: userMap.get(log.admin_id) || 'Unknown',
+        target_email: log.details?.target_email || (log.target_user_id ? userMap.get(log.target_user_id) : null)
+      }
+    }));
   } catch (err) {
     console.error('Error in getAuditLogs:', err);
     return [];

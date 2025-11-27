@@ -195,8 +195,6 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
                 <option value="BALANCE_DEBITED">Списание баланса</option>
                 <option value="SETTINGS_UPDATED">Обновление настроек</option>
                 <option value="PROVIDER_CHANGED">Изменение провайдера</option>
-                <option value="LOGIN">Вход</option>
-                <option value="LOGOUT">Выход</option>
               </select>
             </div>
 
@@ -272,27 +270,45 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
                       <h3 className="text-white font-medium mb-1">
                         {formatActionType(log.action_type)}
                       </h3>
-                      <div className="flex items-center gap-3 text-sm text-slate-400">
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
                         <span className="flex items-center gap-1">
                           <Calendar size={14} />
                           {formatDate(log.created_at)}
                         </span>
-                        {log.admin_id && (
+                        {log.details?.admin_email && (
+                          <span className="flex items-center gap-1">
+                            <Shield size={14} />
+                            Админ: <span className="text-purple-400">{log.details.admin_email}</span>
+                          </span>
+                        )}
+                        {log.details?.target_email && (
                           <span className="flex items-center gap-1">
                             <User size={14} />
-                            Admin: {log.admin_id.substring(0, 8)}...
+                            Пользователь: <span className="text-indigo-400">{log.details.target_email}</span>
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Details */}
+                  {/* Details - Simplified */}
                   {log.details && (
-                    <div className="bg-slate-900/50 rounded-lg p-3 mt-2">
-                      <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono overflow-x-auto">
-                        {JSON.stringify(log.details, null, 2)}
-                      </pre>
+                    <div className="mt-2 space-y-1">
+                      {log.details.from && log.details.to && (
+                        <div className="text-sm text-slate-300">
+                          <span className="text-slate-500">Роль изменена:</span> {log.details.from} → {log.details.to}
+                        </div>
+                      )}
+                      {log.details.amount && (
+                        <div className="text-sm text-slate-300">
+                          <span className="text-slate-500">Сумма:</span> {Number(log.details.amount).toLocaleString()} ₽
+                        </div>
+                      )}
+                      {log.details.reason && (
+                        <div className="text-sm text-slate-300">
+                          <span className="text-slate-500">Причина:</span> {log.details.reason}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
