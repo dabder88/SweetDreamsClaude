@@ -25,13 +25,17 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_action_type ON audit_log(action_type);
 -- Enable Row Level Security
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Admins can view all audit logs" ON audit_log;
+DROP POLICY IF EXISTS "System can insert audit logs" ON audit_log;
+
 -- RLS Policies: Only admins can view audit logs
-CREATE POLICY IF NOT EXISTS "Admins can view all audit logs"
+CREATE POLICY "Admins can view all audit logs"
   ON audit_log FOR SELECT
   USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 -- Only system (SECURITY DEFINER functions) can insert
-CREATE POLICY IF NOT EXISTS "System can insert audit logs"
+CREATE POLICY "System can insert audit logs"
   ON audit_log FOR INSERT
   WITH CHECK (true);
 
