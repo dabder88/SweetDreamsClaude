@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText } from 'lucide-react';
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
 import type { User, JournalEntry } from '../types';
+import {
+  getSystemStats,
+  getTodayAnalysesCount,
+  getMonthlyRevenue,
+  getTotalDreamEntries
+} from '../services/adminService';
 
 interface AdminPanelProps {
   onNavigate: (view: string) => void;
@@ -27,6 +33,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
 
   const [selectedUser, setSelectedUser] = useState<UserWithBalance | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Key to force refresh UserManagement
+
+  // Statistics state
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [todayAnalyses, setTodayAnalyses] = useState<number>(0);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<number>(0);
+  const [totalEntries, setTotalEntries] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  // Load statistics on component mount
+  useEffect(() => {
+    const loadStats = async () => {
+      setLoading(true);
+      try {
+        const [systemStats, todayCount, revenue, entries] = await Promise.all([
+          getSystemStats(),
+          getTodayAnalysesCount(),
+          getMonthlyRevenue(),
+          getTotalDreamEntries()
+        ]);
+
+        setTotalUsers(systemStats.totalUsers);
+        setTodayAnalyses(todayCount);
+        setMonthlyRevenue(revenue);
+        setTotalEntries(entries);
+      } catch (err) {
+        console.error('Error loading admin stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (currentView === 'overview') {
+      loadStats();
+    }
+  }, [currentView]);
 
   const handleViewUser = (user: UserWithBalance) => {
     setSelectedUser(user);
@@ -95,7 +136,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
             <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
               <Users className="text-indigo-400" size={20} />
             </div>
-            <span className="text-2xl font-bold text-white">-</span>
+            <span className="text-2xl font-bold text-white">
+              {loading ? '...' : totalUsers.toLocaleString()}
+            </span>
           </div>
           <h3 className="text-slate-400 text-sm">Всего пользователей</h3>
         </div>
@@ -105,7 +148,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
             <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
               <Activity className="text-emerald-400" size={20} />
             </div>
-            <span className="text-2xl font-bold text-white">-</span>
+            <span className="text-2xl font-bold text-white">
+              {loading ? '...' : todayAnalyses.toLocaleString()}
+            </span>
           </div>
           <h3 className="text-slate-400 text-sm">Анализов сегодня</h3>
         </div>
@@ -115,7 +160,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
             <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
               <DollarSign className="text-amber-400" size={20} />
             </div>
-            <span className="text-2xl font-bold text-white">-</span>
+            <span className="text-2xl font-bold text-white">
+              {loading ? '...' : `${monthlyRevenue.toLocaleString()} ₽`}
+            </span>
           </div>
           <h3 className="text-slate-400 text-sm">Выручка за месяц</h3>
         </div>
@@ -125,7 +172,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
             <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <FileText className="text-purple-400" size={20} />
             </div>
-            <span className="text-2xl font-bold text-white">-</span>
+            <span className="text-2xl font-bold text-white">
+              {loading ? '...' : totalEntries.toLocaleString()}
+            </span>
           </div>
           <h3 className="text-slate-400 text-sm">Всего записей</h3>
         </div>

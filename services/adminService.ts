@@ -737,6 +737,65 @@ export const getFinancialStats = async (): Promise<FinancialStats> => {
   }
 };
 
+/**
+ * Get today's analysis count
+ */
+export const getTodayAnalysesCount = async (): Promise<number> => {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const { count } = await supabase
+      .from('analysis_metadata')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', todayStart.toISOString());
+
+    return count || 0;
+  } catch (err) {
+    console.error('Error in getTodayAnalysesCount:', err);
+    return 0;
+  }
+};
+
+/**
+ * Get monthly revenue (current month)
+ */
+export const getMonthlyRevenue = async (): Promise<number> => {
+  try {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const { data: transactions } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('status', 'success')
+      .in('type', ['deposit', 'purchase', 'manual_credit'])
+      .gte('created_at', monthStart.toISOString());
+
+    const totalRevenue = (transactions || []).reduce((sum, t) => sum + Number(t.amount), 0);
+    return totalRevenue;
+  } catch (err) {
+    console.error('Error in getMonthlyRevenue:', err);
+    return 0;
+  }
+};
+
+/**
+ * Get total dream entries count
+ */
+export const getTotalDreamEntries = async (): Promise<number> => {
+  try {
+    const { count } = await supabase
+      .from('dream_entries')
+      .select('*', { count: 'exact', head: true });
+
+    return count || 0;
+  } catch (err) {
+    console.error('Error in getTotalDreamEntries:', err);
+    return 0;
+  }
+};
+
 // =====================================================
 // AUDIT LOG
 // =====================================================
@@ -862,31 +921,26 @@ export const getUsageMetrics = async (filters?: MetricFilters): Promise<UsageMet
  */
 export const getSystemStats = async (): Promise<SystemStats> => {
   try {
-    // Get total users
-    const { count: totalUsers } = await supabase
-      .from('auth.users')
-      .select('*', { count: 'exact', head: true });
+    // Get all users via RPC function (bypasses RLS)
+    const { data: allUsersData, error: usersError } = await supabase.rpc('get_all_users');
 
-    // Get new users in different periods
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      throw usersError;
+    }
+
+    const allUsers = allUsersData || [];
+    const totalUsers = allUsers.length;
+
+    // Calculate new users in different periods
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const { count: newUsers24h } = await supabase
-      .from('auth.users')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', yesterday.toISOString());
-
-    const { count: newUsers7d } = await supabase
-      .from('auth.users')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', weekAgo.toISOString());
-
-    const { count: newUsers30d } = await supabase
-      .from('auth.users')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', monthAgo.toISOString());
+    const newUsers24h = allUsers.filter(u => new Date(u.created_at) >= yesterday).length;
+    const newUsers7d = allUsers.filter(u => new Date(u.created_at) >= weekAgo).length;
+    const newUsers30d = allUsers.filter(u => new Date(u.created_at) >= monthAgo).length;
 
     // Get active users (users with at least 1 analysis)
     const { data: analysisData } = await supabase
@@ -918,10 +972,10 @@ export const getSystemStats = async (): Promise<SystemStats> => {
     const apiSuccessRate = metricsData.length > 0 ? (successCount / metricsData.length) * 100 : 100;
 
     return {
-      totalUsers: totalUsers || 0,
-      newUsers24h: newUsers24h || 0,
-      newUsers7d: newUsers7d || 0,
-      newUsers30d: newUsers30d || 0,
+      totalUsers,
+      newUsers24h,
+      newUsers7d,
+      newUsers30d,
       activeUsers,
       confirmedEmailPercent: 0, // TODO
       totalAnalyses,
