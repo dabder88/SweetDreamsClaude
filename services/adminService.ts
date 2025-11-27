@@ -1016,3 +1016,64 @@ export const getUserDreamEntries = async (userId: string): Promise<any[]> => {
     return [];
   }
 };
+
+// =====================================================
+// ROLE MANAGEMENT
+// =====================================================
+
+/**
+ * Promote a regular user to admin role
+ * Only callable by existing admins
+ * Logs action to audit_log
+ */
+export const promoteToAdmin = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase.rpc('promote_user_to_admin', {
+      target_user_id: userId
+    });
+
+    if (error) {
+      console.error('Error promoting user to admin:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Check if the RPC function returned an error
+    if (data && !data.success) {
+      return { success: false, error: data.error || 'Failed to promote user' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in promoteToAdmin:', err);
+    return { success: false, error: 'Ошибка при назначении администратора' };
+  }
+};
+
+/**
+ * Demote an admin to regular user role
+ * Only callable by existing admins
+ * Cannot remove the last admin (system protection)
+ * Logs action to audit_log
+ */
+export const demoteFromAdmin = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase.rpc('demote_admin_to_user', {
+      target_user_id: userId
+    });
+
+    if (error) {
+      console.error('Error demoting admin to user:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Check if the RPC function returned an error
+    if (data && !data.success) {
+      return { success: false, error: data.error || 'Failed to demote user' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in demoteFromAdmin:', err);
+    return { success: false, error: 'Ошибка при снятии роли администратора' };
+  }
+};

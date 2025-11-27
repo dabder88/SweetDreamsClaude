@@ -18,13 +18,16 @@ import {
   BarChart3,
   FileText,
   Clock,
-  Lock
+  Lock,
+  Shield
 } from 'lucide-react';
 import {
   getUserTransactions,
   adjustBalance,
   getUserAnalysisMetadata,
   getUserDreamEntries,
+  promoteToAdmin,
+  demoteFromAdmin,
   TransactionType,
   type Transaction
 } from '../services/adminService';
@@ -59,8 +62,15 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
   const [loadingDreams, setLoadingDreams] = useState(false);
   const [activeTab, setActiveTab] = useState<'transactions' | 'dreams' | 'analytics'>('transactions');
 
+  // Role management states
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
+
   // Check if dream data should be hidden due to privacy settings
   const isDreamDataHidden = user.privacy_hide_dreams && currentAdminId && user.id !== currentAdminId;
+
+  // Check if viewing own profile
+  const isSelf = currentAdminId === user.id;
 
   useEffect(() => {
     loadTransactions();
@@ -146,6 +156,40 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
     }
   };
 
+  const handleRoleChange = async () => {
+    setChangingRole(true);
+
+    try {
+      let result;
+      if (user.role === 'admin') {
+        result = await demoteFromAdmin(user.id);
+      } else {
+        result = await promoteToAdmin(user.id);
+      }
+
+      if (result.success) {
+        alert(
+          user.role === 'admin'
+            ? '✅ Пользователь понижен до обычного пользователя'
+            : '✅ Пользователь повышен до администратора'
+        );
+        setShowRoleModal(false);
+
+        // Reload user data
+        if (onUserUpdate) {
+          onUserUpdate();
+        }
+      } else {
+        alert(`❌ Ошибка: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('Error changing role:', err);
+      alert('❌ Произошла ошибка при изменении роли');
+    } finally {
+      setChangingRole(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('ru-RU', {
       day: '2-digit',
@@ -189,6 +233,20 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
           <h2 className="text-2xl font-bold text-white">Информация о пользователе</h2>
           <p className="text-slate-400">Детальный просмотр и управление</p>
         </div>
+
+        {/* Role Management Button */}
+        <button
+          type="button"
+          onClick={() => setShowRoleModal(true)}
+          className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors font-medium ${
+            user.role === 'admin'
+              ? 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30'
+              : 'bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/30'
+          }`}
+        >
+          <Shield size={18} />
+          {user.role === 'admin' ? 'Снять права админа' : 'Назначить админом'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -696,6 +754,86 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, onBack, onUserUpdate, onV
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Change Modal */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className={`w-8 h-8 ${user.role === 'admin' ? 'text-red-400' : 'text-green-400'}`} />
+              <h3 className="text-xl font-bold text-white">
+                {user.role === 'admin' ? 'Понизить до пользователя?' : 'Назначить администратором?'}
+              </h3>
+            </div>
+
+            <div className="mb-6 space-y-3">
+              <p className="text-slate-300">
+                Вы собираетесь изменить роль пользователя:
+              </p>
+              <div className="bg-slate-900/50 rounded-lg p-3">
+                <p className="text-white font-medium">{user.name || user.email}</p>
+                <p className="text-sm text-slate-400">{user.email}</p>
+              </div>
+
+              {user.role === 'admin' ? (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-sm text-red-300">
+                    ⚠️ Пользователь потеряет доступ к админ-панели и всем административным функциям
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-sm text-green-300">
+                    ✓ Пользователь получит полный доступ к админ-панели и управлению системой
+                  </p>
+                </div>
+              )}
+
+              {/* Warning if demoting self */}
+              {isSelf && user.role === 'admin' && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-yellow-300 flex items-start gap-2">
+                    <span className="text-lg leading-none">⚠️</span>
+                    <span>
+                      Вы снимаете админские права с САМОГО СЕБЯ. После этого вы потеряете доступ к админ-панели.
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRoleModal(false)}
+                disabled={changingRole}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-xl transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleRoleChange}
+                disabled={changingRole}
+                className={`flex-1 px-4 py-3 text-white rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                  user.role === 'admin'
+                    ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-800'
+                    : 'bg-green-600 hover:bg-green-700 disabled:bg-green-800'
+                }`}
+              >
+                {changingRole ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Обработка...
+                  </>
+                ) : (
+                  'Подтвердить'
+                )}
+              </button>
             </div>
           </div>
         </div>
