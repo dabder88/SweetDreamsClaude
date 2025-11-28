@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [
+      "mcp__sequential-thinking:*",
+      "mcp__playwright:*",
+      "mcp__context7:*",
       "Bash(git remote:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
@@ -11,16 +14,22 @@
       "Bash(git commit:*)",
       "Bash(tasklist:*)",
       "Bash(git push:*)",
-      "Bash(npx -y @modelcontextprotocol/server-sequential-thinking)",
-      "Bash(claude mcp add sequential-thinking \"cmd /c npx -y @modelcontextprotocol/server-sequential-thinking\")",
       "Bash(claude mcp:*)",
       "Bash(where:*)",
       "Bash(dir:*)",
       "Bash(node:*)",
       "Bash(cat:*)",
-      "mcp__playwright__*",
       "Bash(timeout 5 bash:*)",
-      "Bash(timeout 10 bash:*)"
+      "Bash(timeout 10 bash:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_console_messages",
+      "Bash(mkdir:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_run_code"
     ],
     "deny": [],
     "ask": []

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText } from 'lucide-react';
+import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText, Cpu } from 'lucide-react';
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
 import AuditLog from './AuditLog';
 import AdminAnalytics from './AdminAnalytics';
+import AIProviders from './AIProviders';
 import type { User, JournalEntry } from '../types';
 import {
   getSystemStats,
@@ -25,7 +26,7 @@ interface UserWithBalance extends User {
   dreamCount?: number;
 }
 
-type AdminView = 'overview' | 'users' | 'user-detail' | 'finances' | 'analytics' | 'audit';
+type AdminView = 'overview' | 'users' | 'user-detail' | 'finances' | 'analytics' | 'audit' | 'ai-providers';
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propView, onViewChange, onViewDream, currentUser }) => {
   // Use prop view if provided, otherwise use local state
@@ -128,6 +129,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
   if (currentView === 'analytics') {
     return (
       <AdminAnalytics
+        onBack={handleBackToOverview}
+      />
+    );
+  }
+
+  // Render AI Providers view
+  if (currentView === 'ai-providers') {
+    return (
+      <AIProviders
         onBack={handleBackToOverview}
       />
     );
@@ -258,17 +268,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
           </p>
         </button>
 
-        {/* AI Providers (Placeholder) */}
+        {/* AI Providers */}
         <button
-          onClick={() => console.log('Navigate to AI Providers')}
-          className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-cyan-500/50 transition-all text-left"
+          onClick={() => setCurrentView('ai-providers')}
+          className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-purple-500/50 transition-all text-left"
         >
-          <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-cyan-500/30 transition-colors">
-            <Activity className="text-cyan-400" size={24} />
+          <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-500/30 transition-colors">
+            <Cpu className="text-purple-400" size={24} />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">AI-провайдеры</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">AI Провайдеры</h3>
           <p className="text-slate-400 text-sm">
-            Управление подключениями к AI (скоро)
+            Управление AI провайдерами и моделями
           </p>
         </button>
 

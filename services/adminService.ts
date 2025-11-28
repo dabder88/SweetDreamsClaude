@@ -15,7 +15,10 @@ import {
   DayOfWeekStats,
   DreamLengthStats,
   AnalyticsPeriod,
-  PsychMethod
+  PsychMethod,
+  AIProviderConfig,
+  AIModel,
+  AIProviderType
 } from '../types';
 import { PSYCH_METHODS } from '../constants';
 
@@ -1483,5 +1486,246 @@ export const getUsageByDayOfWeek = async (): Promise<DayOfWeekStats[]> => {
   } catch (err) {
     console.error('Error in getUsageByDayOfWeek:', err);
     return [];
+  }
+};
+
+// =====================================================
+// AI PROVIDER MANAGEMENT FUNCTIONS
+// =====================================================
+
+/**
+ * Get all AI provider configurations
+ */
+export const getAllProviders = async (): Promise<AIProviderConfig[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_provider_configs')
+      .select('*')
+      .order('provider_name', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error in getAllProviders:', err);
+    throw err;
+  }
+};
+
+/**
+ * Get active AI provider configuration
+ */
+export const getActiveProvider = async (): Promise<AIProviderConfig | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_provider_configs')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+    return data || null;
+  } catch (err) {
+    console.error('Error in getActiveProvider:', err);
+    return null;
+  }
+};
+
+/**
+ * Get all models for a specific provider type
+ */
+export const getModelsForProvider = async (providerType: AIProviderType): Promise<AIModel[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_models')
+      .select('*')
+      .eq('provider_type', providerType)
+      .eq('is_available', true)
+      .order('pricing->input', { ascending: true }); // Sort by price (cheapest first)
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error in getModelsForProvider:', err);
+    throw err;
+  }
+};
+
+/**
+ * Get all available models (across all providers)
+ */
+export const getAllModels = async (): Promise<AIModel[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_models')
+      .select('*')
+      .eq('is_available', true)
+      .order('provider_type', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error in getAllModels:', err);
+    throw err;
+  }
+};
+
+/**
+ * Get specific model by ID
+ */
+export const getModelById = async (modelId: string): Promise<AIModel | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_models')
+      .select('*')
+      .eq('id', modelId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (err) {
+    console.error('Error in getModelById:', err);
+    return null;
+  }
+};
+
+/**
+ * Update AI provider configuration
+ */
+export const updateProviderConfig = async (
+  providerId: string,
+  updates: Partial<AIProviderConfig>
+): Promise<void> => {
+  try {
+    // Ensure updated_at is set
+    const { error } = await supabase
+      .from('ai_provider_configs')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', providerId);
+
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error in updateProviderConfig:', err);
+    throw err;
+  }
+};
+
+/**
+ * Set active AI provider (deactivates all others)
+ */
+export const setActiveProvider = async (providerId: string): Promise<void> => {
+  try {
+    // 1. Deactivate all providers
+    const { error: deactivateError } = await supabase
+      .from('ai_provider_configs')
+      .update({ is_active: false })
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+
+    if (deactivateError) throw deactivateError;
+
+    // 2. Activate selected provider
+    const { error: activateError } = await supabase
+      .from('ai_provider_configs')
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq('id', providerId);
+
+    if (activateError) throw activateError;
+
+    console.log(`Successfully activated provider: ${providerId}`);
+  } catch (err) {
+    console.error('Error in setActiveProvider:', err);
+    throw err;
+  }
+};
+
+/**
+ * Test AI provider connection
+ * Makes a minimal API call to verify configuration
+ */
+export const testProviderConnection = async (providerId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Import aiService dynamically to avoid circular dependencies
+    const { aiService } = await import('./ai/aiService');
+
+    // Temporarily activate this provider
+    const originalActive = await getActiveProvider();
+
+    // Set test provider as active
+    await setActiveProvider(providerId);
+
+    // Clear cache to force reload
+    aiService.clearCache();
+
+    // Test connection
+    const result = await aiService.testConnection();
+
+    // Restore original active provider
+    if (originalActive) {
+      await setActiveProvider(originalActive.id);
+      aiService.clearCache();
+    }
+
+    return result;
+  } catch (err: any) {
+    console.error('Error in testProviderConnection:', err);
+    return {
+      success: false,
+      message: err.message || 'Не удалось протестировать подключение'
+    };
+  }
+};
+
+/**
+ * Add new AI model to database
+ */
+export const addModel = async (model: Omit<AIModel, 'id' | 'created_at'>): Promise<AIModel> => {
+  try {
+    const { data, error } = await supabase
+      .from('ai_models')
+      .insert(model)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error in addModel:', err);
+    throw err;
+  }
+};
+
+/**
+ * Update AI model configuration
+ */
+export const updateModel = async (modelId: string, updates: Partial<AIModel>): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('ai_models')
+      .update(updates)
+      .eq('id', modelId);
+
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error in updateModel:', err);
+    throw err;
+  }
+};
+
+/**
+ * Delete AI model
+ */
+export const deleteModel = async (modelId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('ai_models')
+      .delete()
+      .eq('id', modelId);
+
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error in deleteModel:', err);
+    throw err;
   }
 };

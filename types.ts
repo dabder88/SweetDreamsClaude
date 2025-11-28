@@ -252,3 +252,53 @@ export interface DreamLengthStats {
 }
 
 export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year' | 'all';
+
+// =====================================================
+// AI PROVIDER MANAGEMENT TYPES
+// =====================================================
+
+export type AIProviderType = 'gemini' | 'openai' | 'claude' | 'aitunnel' | 'neuroapi' | 'custom';
+
+export interface AIProviderConfig {
+  id: string;
+  provider_type: AIProviderType;
+  provider_name: string;
+  is_active: boolean;
+  api_key_env_name?: string; // Name of environment variable (e.g., 'VITE_AITUNNEL_KEY')
+  base_url?: string; // Base URL for API calls
+  default_model_id?: string; // UUID reference to ai_models table
+  config: {
+    temperature?: number;
+    max_tokens?: number;
+    top_p?: number;
+    [key: string]: any;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIModel {
+  id: string;
+  provider_type: AIProviderType;
+  model_id: string; // Model identifier for API calls (e.g., 'gpt-5-mini', 'claude-sonnet-4-5')
+  model_name: string; // Human-readable name (e.g., 'GPT-5 Mini', 'Claude Sonnet 4.5')
+  provider_name?: string; // Provider display name (e.g., 'OpenAI', 'Anthropic', 'Google')
+  capabilities: {
+    text: boolean;
+    image: boolean;
+    reasoning: boolean;
+  };
+  pricing: {
+    input: number; // Price per 1M input tokens
+    output: number; // Price per 1M output tokens
+    currency: string; // 'USD', 'RUB'
+    per: string; // '1M tokens'
+  };
+  performance: {
+    intelligence: 'low' | 'medium' | 'high' | 'highest';
+    speed: 'slow' | 'medium' | 'fast' | 'fastest';
+  };
+  context_length: number; // Maximum context window in tokens
+  is_available: boolean;
+  created_at: string;
+}
