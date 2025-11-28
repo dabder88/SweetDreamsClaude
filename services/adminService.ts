@@ -112,14 +112,22 @@ export interface UserDetails extends User {
 
 /**
  * Get user role from admin_users table
+ * Has a 3 second timeout to prevent blocking app loading
  */
 export const getUserRole = async (userId: string): Promise<'user' | 'admin'> => {
   try {
-    const { data, error } = await supabase
+    // Add timeout to prevent infinite waiting
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: new Error('Timeout') }), 3000)
+    );
+
+    const queryPromise = supabase
       .from('admin_users')
       .select('role')
       .eq('user_id', userId)
       .single();
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error || !data) {
       return 'user';
@@ -366,22 +374,30 @@ export const deleteUser = async (userId: string): Promise<{ success: boolean; er
 
 /**
  * Get user balance
+ * Has a 3 second timeout to prevent blocking app loading
  */
 export const getUserBalance = async (userId: string): Promise<UserBalance | null> => {
   try {
-    const { data, error } = await supabase
+    // Add timeout to prevent infinite waiting
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: new Error('Timeout') }), 3000)
+    );
+
+    const queryPromise = supabase
       .from('user_balances')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no row exists
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) {
       // Log 406 errors with more details for debugging
       if (error.code === '406' || error.message?.includes('406')) {
         console.warn(`[getUserBalance] 406 error for user ${userId}:`, error);
         console.warn('[getUserBalance] This usually means RLS is blocking access. Check admin_users table.');
-      } else if (error.code !== 'PGRST116') {
-        // Only log errors that are not "not found"
+      } else if (error.code !== 'PGRST116' && error.message !== 'Timeout') {
+        // Only log errors that are not "not found" or timeout
         console.error('Error fetching user balance:', error);
       }
       return null;

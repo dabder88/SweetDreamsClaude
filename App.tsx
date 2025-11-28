@@ -64,15 +64,29 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       if (isSupabaseConfigured()) {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
+        try {
+          // Add timeout to prevent infinite loading if Supabase is slow/unavailable
+          const timeoutPromise = new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error('Auth check timeout')), 5000)
+          );
 
-        // Migrate local entries to Supabase if user is authenticated
-        if (currentUser) {
-          const migratedCount = await migrateLocalEntriesToSupabase();
-          if (migratedCount > 0) {
-            console.log(`Migrated ${migratedCount} entries to Supabase`);
+          const authPromise = getCurrentUser();
+
+          const currentUser = await Promise.race([authPromise, timeoutPromise]);
+          setUser(currentUser);
+
+          // Migrate local entries to Supabase if user is authenticated
+          // Run in background, don't block loading
+          if (currentUser) {
+            migrateLocalEntriesToSupabase().then(migratedCount => {
+              if (migratedCount > 0) {
+                console.log(`Migrated ${migratedCount} entries to Supabase`);
+              }
+            }).catch(err => console.warn('Migration failed:', err));
           }
+        } catch (err) {
+          console.warn('Auth check failed or timed out:', err);
+          // Continue without user - they can still use the app
         }
       }
       setAuthLoading(false);
