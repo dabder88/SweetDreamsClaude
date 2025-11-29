@@ -18,7 +18,8 @@ import {
   getModelsForProvider,
   updateProviderConfig,
   setActiveProvider,
-  testProviderConnection
+  testProviderConnection,
+  updateModel
 } from '../services/adminService';
 import type { AIProviderConfig, AIModel, AIProviderType } from '../types';
 
@@ -37,6 +38,11 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
+
+  // Configuration state
+  const [providerTemperature, setProviderTemperature] = useState<number>(0.4);
+  const [providerMaxTokens, setProviderMaxTokens] = useState<number>(8192);
+  const [modelConfigs, setModelConfigs] = useState<Record<string, { temperature: number; max_tokens: number }>>({});
 
   // Load providers on mount
   useEffect(() => {
@@ -62,11 +68,25 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     setSelectedProvider(provider);
     setTestResult(null);
 
+    // Initialize provider configuration
+    setProviderTemperature(provider.config.temperature || 0.4);
+    setProviderMaxTokens(provider.config.max_tokens || 8192);
+
     // Load available models for this provider
     try {
       const models = await getModelsForProvider(provider.provider_type);
       setAvailableModels(models);
       setSelectedModel(provider.default_model_id || '');
+
+      // Initialize model configurations
+      const configs: Record<string, { temperature: number; max_tokens: number }> = {};
+      models.forEach(model => {
+        configs[model.id] = {
+          temperature: model.model_config?.temperature || provider.config.temperature || 0.4,
+          max_tokens: model.model_config?.max_tokens || provider.config.max_tokens || 8192
+        };
+      });
+      setModelConfigs(configs);
     } catch (err) {
       console.error('Failed to load models:', err);
       setAvailableModels([]);
@@ -83,10 +103,29 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     }
 
     try {
-      // Update provider configuration with selected model
+      // Update provider configuration (default params + selected model)
       await updateProviderConfig(selectedProvider.id, {
-        default_model_id: selectedModel
+        default_model_id: selectedModel,
+        config: {
+          temperature: providerTemperature,
+          max_tokens: providerMaxTokens,
+          top_p: 1.0
+        }
       });
+
+      // Update each model's configuration
+      for (const model of availableModels) {
+        const modelConfig = modelConfigs[model.id];
+        if (modelConfig) {
+          await updateModel(model.id, {
+            model_config: {
+              temperature: modelConfig.temperature,
+              max_tokens: modelConfig.max_tokens,
+              top_p: 1.0
+            }
+          });
+        }
+      }
 
       // Activate provider
       await setActiveProvider(selectedProvider.id);
@@ -329,9 +368,142 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
                 )}
               </div>
 
+              {/* Provider-Level Configuration */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Настройки по умолчанию для провайдера</h3>
+                <div className="bg-slate-900/50 rounded-lg p-4 space-y-4">
+                  {/* Temperature */}
+                  <div>
+                    <label className="flex items-center justify-between text-sm text-slate-300 mb-2">
+                      <span>Temperature (креативность)</span>
+                      <span className="font-mono text-emerald-400">{providerTemperature.toFixed(1)}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={providerTemperature}
+                      onChange={(e) => setProviderTemperature(parseFloat(e.target.value))}
+                      aria-label="Provider temperature"
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    />
+                    <div className="flex justify-between text-xs text-slate-500 mt-1">
+                      <span>0.0 (точно)</span>
+                      <span>1.0 (креативно)</span>
+                    </div>
+                  </div>
+
+                  {/* Max Tokens */}
+                  <div>
+                    <label className="flex items-center justify-between text-sm text-slate-300 mb-2">
+                      <span>Max Tokens (объём ответа)</span>
+                      <span className="font-mono text-emerald-400">{providerMaxTokens}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1000"
+                      max="32000"
+                      step="1000"
+                      value={providerMaxTokens}
+                      onChange={(e) => setProviderMaxTokens(parseInt(e.target.value))}
+                      aria-label="Provider max tokens"
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    />
+                    <div className="flex justify-between text-xs text-slate-500 mt-1">
+                      <span>1K (коротко)</span>
+                      <span>32K (очень подробно)</span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-400 bg-slate-800/50 rounded p-2">
+                    💡 Эти параметры будут использоваться по умолчанию для всех моделей провайдера. Можно переопределить для конкретных моделей ниже.
+                  </div>
+                </div>
+              </div>
+
+              {/* Per-Model Configuration */}
+              {availableModels.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Настройки для каждой модели</h3>
+                  <div className="space-y-4">
+                    {availableModels.map(model => (
+                      <div key={model.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-white font-medium">{model.model_name}</h4>
+                            <p className="text-xs text-slate-400 font-mono">{model.model_id}</p>
+                          </div>
+                          {selectedModel === model.id && (
+                            <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 rounded text-xs">
+                              Выбрана
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          {/* Model Temperature */}
+                          <div>
+                            <label className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                              <span>Temperature</span>
+                              <span className="font-mono text-emerald-400">{modelConfigs[model.id]?.temperature.toFixed(1) || '0.4'}</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.1"
+                              value={modelConfigs[model.id]?.temperature || 0.4}
+                              onChange={(e) => {
+                                setModelConfigs({
+                                  ...modelConfigs,
+                                  [model.id]: {
+                                    ...modelConfigs[model.id],
+                                    temperature: parseFloat(e.target.value)
+                                  }
+                                });
+                              }}
+                              aria-label={`Temperature for ${model.model_name}`}
+                              className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                            />
+                          </div>
+
+                          {/* Model Max Tokens */}
+                          <div>
+                            <label className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                              <span>Max Tokens</span>
+                              <span className="font-mono text-emerald-400">{modelConfigs[model.id]?.max_tokens || 8192}</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="1000"
+                              max="32000"
+                              step="1000"
+                              value={modelConfigs[model.id]?.max_tokens || 8192}
+                              onChange={(e) => {
+                                setModelConfigs({
+                                  ...modelConfigs,
+                                  [model.id]: {
+                                    ...modelConfigs[model.id],
+                                    max_tokens: parseInt(e.target.value)
+                                  }
+                                });
+                              }}
+                              aria-label={`Max tokens for ${model.model_name}`}
+                              className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Test Connection */}
               <div className="mb-6">
                 <button
+                  type="button"
                   onClick={handleTestConnection}
                   disabled={testing || !selectedModel}
                   className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors"
@@ -376,12 +548,14 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
             {/* Modal Footer */}
             <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setShowConfigModal(false)}
                 className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
               >
                 Отмена
               </button>
               <button
+                type="button"
                 onClick={handleSaveAndActivate}
                 disabled={!selectedModel}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors"
