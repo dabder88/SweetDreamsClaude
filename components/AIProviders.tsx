@@ -11,7 +11,10 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Loader
+  Loader,
+  X,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -42,6 +45,9 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showTextProviders, setShowTextProviders] = useState(false);
+  const [showImageProviders, setShowImageProviders] = useState(false);
+  const [selectedModelForConfig, setSelectedModelForConfig] = useState<string | null>(null);
 
   // Configuration state
   const [providerTemperature, setProviderTemperature] = useState<number>(0.4);
@@ -353,69 +359,93 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
       ) : (
         <div className="space-y-8">
           {/* ===== БЛОК 1: ИИ ДЛЯ ТЕКСТОВ ===== */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowTextProviders(!showTextProviders)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
                   <Brain className="text-white" size={20} />
                 </div>
-                <div>
+                <div className="text-left">
                   <h2 className="text-xl font-semibold text-white">ИИ для текстов</h2>
                   <p className="text-sm text-slate-400">Анализ снов, отчёты</p>
                 </div>
               </div>
-              {activeProviderForText && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
-                  <CheckCircle size={16} />
-                  <span className="text-sm font-medium">{activeProviderForText.provider_name}</span>
-                </div>
-              )}
-            </div>
+              <div className="flex items-center gap-3">
+                {activeProviderForText && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
+                    <CheckCircle size={16} />
+                    <span className="text-sm font-medium">{activeProviderForText.provider_name}</span>
+                  </div>
+                )}
+                {showTextProviders ? <ChevronUp className="text-slate-400" size={20} /> : <ChevronDown className="text-slate-400" size={20} />}
+              </div>
+            </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.map(provider => (
-                <ProviderCard
-                  key={`text-${provider.id}`}
-                  provider={provider}
-                  taskType="text"
-                  isActive={activeProviderForText?.id === provider.id}
-                  onConfigure={() => handleConfigureProvider(provider, 'text')}
-                />
-              ))}
-            </div>
+            {showTextProviders && (
+              <div className="p-6 pt-0 border-t border-slate-700/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {providers.map(provider => (
+                    <ProviderCard
+                      key={`text-${provider.id}`}
+                      provider={provider}
+                      taskType="text"
+                      isActive={activeProviderForText?.id === provider.id}
+                      onConfigure={() => handleConfigureProvider(provider, 'text')}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ===== БЛОК 2: ИИ ДЛЯ ИЗОБРАЖЕНИЙ ===== */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowImageProviders(!showImageProviders)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
                   <Zap className="text-white" size={20} />
                 </div>
-                <div>
+                <div className="text-left">
                   <h2 className="text-xl font-semibold text-white">ИИ для изображений</h2>
                   <p className="text-sm text-slate-400">Визуализация снов, аватары</p>
                 </div>
               </div>
-              {activeProviderForImages && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
-                  <CheckCircle size={16} />
-                  <span className="text-sm font-medium">{activeProviderForImages.provider_name}</span>
-                </div>
-              )}
-            </div>
+              <div className="flex items-center gap-3">
+                {activeProviderForImages && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
+                    <CheckCircle size={16} />
+                    <span className="text-sm font-medium">{activeProviderForImages.provider_name}</span>
+                  </div>
+                )}
+                {showImageProviders ? <ChevronUp className="text-slate-400" size={20} /> : <ChevronDown className="text-slate-400" size={20} />}
+              </div>
+            </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.map(provider => (
-                <ProviderCard
-                  key={`image-${provider.id}`}
-                  provider={provider}
-                  taskType="image"
-                  isActive={activeProviderForImages?.id === provider.id}
-                  onConfigure={() => handleConfigureProvider(provider, 'image')}
-                />
-              ))}
-            </div>
+            {showImageProviders && (
+              <div className="p-6 pt-0 border-t border-slate-700/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {providers
+                    .filter(provider => provider.provider_type !== 'claude') // Exclude Claude from image providers
+                    .map(provider => (
+                      <ProviderCard
+                        key={`image-${provider.id}`}
+                        provider={provider}
+                        taskType="image"
+                        isActive={activeProviderForImages?.id === provider.id}
+                        onConfigure={() => handleConfigureProvider(provider, 'image')}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -425,20 +455,30 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-700">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Настройка {selectedProvider.provider_name}
-              </h2>
-              <div className="flex items-center gap-2">
-                <p className="text-slate-400 text-sm">
-                  {selectedTaskType === 'text' ? 'Для текстов (анализ снов, отчёты)' : 'Для изображений (визуализация, аватары)'}
-                </p>
-                {selectedTaskType === 'text' ? (
-                  <Brain size={16} className="text-blue-400" />
-                ) : (
-                  <Zap size={16} className="text-purple-400" />
-                )}
+            <div className="p-6 border-b border-slate-700 flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Настройка {selectedProvider.provider_name}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-400 text-sm">
+                    {selectedTaskType === 'text' ? 'Для текстов (анализ снов, отчёты)' : 'Для изображений (визуализация, аватары)'}
+                  </p>
+                  {selectedTaskType === 'text' ? (
+                    <Brain size={16} className="text-blue-400" />
+                  ) : (
+                    <Zap size={16} className="text-purple-400" />
+                  )}
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowConfigModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                aria-label="Закрыть"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
             </div>
 
             {/* Modal Body */}
@@ -462,77 +502,24 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
                 )}
               </div>
 
-              {/* Provider-Level Configuration */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Настройки по умолчанию для провайдера</h3>
-                <div className="bg-slate-900/50 rounded-lg p-4 space-y-4">
-                  {/* Temperature */}
-                  <div>
-                    <label className="flex items-center justify-between text-sm text-slate-300 mb-2">
-                      <span>Temperature (креативность)</span>
-                      <span className="font-mono text-emerald-400">{providerTemperature.toFixed(1)}</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={providerTemperature}
-                      onChange={(e) => setProviderTemperature(parseFloat(e.target.value))}
-                      aria-label="Provider temperature"
-                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>0.0 (точно)</span>
-                      <span>1.0 (креативно)</span>
-                    </div>
-                  </div>
-
-                  {/* Max Tokens */}
-                  <div>
-                    <label className="flex items-center justify-between text-sm text-slate-300 mb-2">
-                      <span>Max Tokens (объём ответа)</span>
-                      <span className="font-mono text-emerald-400">{providerMaxTokens}</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="1000"
-                      max="32000"
-                      step="1000"
-                      value={providerMaxTokens}
-                      onChange={(e) => setProviderMaxTokens(parseInt(e.target.value))}
-                      aria-label="Provider max tokens"
-                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>1K (коротко)</span>
-                      <span>32K (очень подробно)</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-slate-400 bg-slate-800/50 rounded p-2">
-                    💡 Эти параметры будут использоваться по умолчанию для всех моделей провайдера. Можно переопределить для конкретных моделей ниже.
-                  </div>
-                </div>
-              </div>
-
               {/* Per-Model Configuration */}
-              {availableModels.length > 0 && (
+              {availableModels.length > 0 && selectedModel && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Настройки для каждой модели</h3>
-                  <div className="space-y-4">
-                    {availableModels.map(model => (
-                      <div key={model.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
+                  <h3 className="text-lg font-semibold text-white mb-4">Настройки модели</h3>
+                  {(() => {
+                    const model = availableModels.find(m => m.id === selectedModel);
+                    if (!model) return null;
+
+                    return (
+                      <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h4 className="text-white font-medium">{model.model_name}</h4>
                             <p className="text-xs text-slate-400 font-mono">{model.model_id}</p>
                           </div>
-                          {selectedModel === model.id && (
-                            <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 rounded text-xs">
-                              Выбрана
-                            </span>
-                          )}
+                          <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 rounded text-xs">
+                            Выбрана
+                          </span>
                         </div>
 
                         <div className="space-y-3">
@@ -589,8 +576,8 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
 

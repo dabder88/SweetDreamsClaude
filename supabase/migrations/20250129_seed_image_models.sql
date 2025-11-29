@@ -230,20 +230,6 @@ INSERT INTO ai_models (
   model_config
 )
 VALUES
-  -- DALL-E 3 via NeuroAPI
-  (
-    'neuroapi',
-    'dall-e-3',
-    'DALL-E 3',
-    'NeuroAPI',
-    '{"text": false, "image": true, "reasoning": false}'::jsonb,
-    '{"input": 0, "output": 40.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
-    '{"speed": "medium", "intelligence": "high"}'::jsonb,
-    0,
-    true,
-    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
-  ),
-
   -- GPT Image 1 via NeuroAPI (Premium quality)
   (
     'neuroapi',
@@ -402,7 +388,7 @@ WHERE provider_type = 'gemini';
 -- - OpenAI: dall-e-3, dall-e-3-hd
 -- - AiTunnel: gpt-image-1, dall-e-3, dall-e-2, qwen-image-edit, seedream-4-0-250828,
 --             gemini-3-pro-image-preview, gemini-2.5-flash-image, flux.2-pro, flux.2-flex (RUB pricing)
--- - NeuroAPI: dall-e-3, gpt-image-1, gemini-2.5-flash-image, gemini-3-pro-image-preview
+-- - NeuroAPI: gpt-image-1, gemini-2.5-flash-image, gemini-3-pro-image-preview
 -- - Gemini: imagen-3.0-generate-002, gemini-2.0-flash-exp, gemini-3-pro-image-preview
 --
 -- Note: Claude does NOT support image generation natively
