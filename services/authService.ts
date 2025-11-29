@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { User, AdminActionType } from '../types';
-import { getUserRole, checkAndPromoteAdmin, getUserBalance, logAdminAction } from './adminService';
+import { getUserRole, checkAndPromoteAdmin, getUserBalance, logAdminAction, clearRoleCache } from './adminService';
 
 export interface AuthError {
   message: string;
@@ -155,6 +155,9 @@ export const signOut = async (): Promise<{ error: AuthError | null }> => {
           timestamp: new Date().toISOString()
         });
       }
+
+      // Clear role cache for this user
+      clearRoleCache(user.id);
     }
 
     const { error } = await supabase.auth.signOut();

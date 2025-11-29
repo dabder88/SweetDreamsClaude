@@ -115,11 +115,36 @@ export interface UserDetails extends User {
 // =====================================================
 
 /**
+ * In-memory cache for user roles to prevent repeated DB queries
+ * This prevents admin panel from disappearing during token refresh
+ */
+const roleCache = new Map<string, { role: 'user' | 'admin'; timestamp: number }>();
+const ROLE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
+/**
+ * Clear role cache for a specific user or all users
+ */
+export const clearRoleCache = (userId?: string): void => {
+  if (userId) {
+    roleCache.delete(userId);
+  } else {
+    roleCache.clear();
+  }
+};
+
+/**
  * Get user role from admin_users table
+ * Uses in-memory cache to prevent repeated queries
  * Has a 3 second timeout to prevent blocking app loading
  */
 export const getUserRole = async (userId: string): Promise<'user' | 'admin'> => {
   try {
+    // Check cache first
+    const cached = roleCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < ROLE_CACHE_TTL) {
+      return cached.role;
+    }
+
     // Add timeout to prevent infinite waiting
     const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
       setTimeout(() => resolve({ data: null, error: new Error('Timeout') }), 3000)
@@ -134,13 +159,30 @@ export const getUserRole = async (userId: string): Promise<'user' | 'admin'> => 
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error || !data) {
+      // If query fails but we have cached data (even if expired), use it
+      if (cached) {
+        console.warn('[getUserRole] Query failed, using cached role for user:', userId);
+        return cached.role;
+      }
       return 'user';
     }
 
     const role = data.role === 'admin' ? 'admin' : 'user';
+
+    // Update cache
+    roleCache.set(userId, { role, timestamp: Date.now() });
+
     return role;
   } catch (err) {
     console.error('Error fetching user role:', err);
+
+    // If error occurs, try to use cached data (even if expired)
+    const cached = roleCache.get(userId);
+    if (cached) {
+      console.warn('[getUserRole] Exception caught, using cached role for user:', userId);
+      return cached.role;
+    }
+
     return 'user';
   }
 };

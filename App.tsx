@@ -97,11 +97,29 @@ function App() {
     // Subscribe to auth state changes
     if (isSupabaseConfigured()) {
       const { data: authListener } = onAuthStateChange((newUser) => {
-        setUser(newUser);
-        if (!newUser && view !== 'landing' && view !== 'wizard') {
-          // User logged out, redirect to landing
-          setView('landing');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Only update user state if we actually have a user object or if user explicitly logged out
+        // This prevents temporary null states during token refresh from clearing admin status
+        if (newUser) {
+          setUser(newUser);
+        } else {
+          // Only set user to null if we're in a non-protected view
+          // This prevents losing admin access during token refresh
+          setUser((prevUser) => {
+            // If we had a user before and now we don't, it might be token refresh
+            // Only clear user if we're in landing/wizard (safe views)
+            if (prevUser && (view === 'landing' || view === 'wizard')) {
+              return null;
+            }
+            // Keep previous user during token refresh in protected views
+            return prevUser || null;
+          });
+
+          // Only redirect to landing if user explicitly logged out
+          // Don't redirect during token refresh
+          if (view !== 'landing' && view !== 'wizard' && !user) {
+            setView('landing');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
         }
       });
 
