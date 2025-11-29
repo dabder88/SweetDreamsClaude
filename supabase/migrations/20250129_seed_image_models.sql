@@ -5,6 +5,17 @@
 -- =====================================================
 
 -- =====================================================
+-- STEP 0: Create unique index for composite key
+-- =====================================================
+-- This allows the same model_id to exist for different providers
+-- (e.g., dall-e-3 for openai, aitunnel, neuroapi)
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_models_provider_model
+  ON ai_models(provider_type, model_id);
+
+COMMENT ON INDEX idx_ai_models_provider_model IS 'Ensures unique combination of provider_type + model_id';
+
+-- =====================================================
 -- OpenAI Image Models (via Direct API)
 -- =====================================================
 
@@ -49,7 +60,7 @@ VALUES
     '{"quality": "hd", "size": "1024x1024", "style": "vivid"}'::jsonb
   )
 
-ON CONFLICT (model_id) DO UPDATE SET
+ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
   pricing = EXCLUDED.pricing,
   model_config = EXCLUDED.model_config;
@@ -85,7 +96,7 @@ VALUES
     '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
   )
 
-ON CONFLICT (model_id, provider_type) DO UPDATE SET
+ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
   pricing = EXCLUDED.pricing;
 
@@ -120,7 +131,7 @@ VALUES
     '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
   )
 
-ON CONFLICT (model_id, provider_type) DO UPDATE SET
+ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
   pricing = EXCLUDED.pricing;
 
@@ -183,7 +194,7 @@ VALUES
     '{"resolution": "4K", "watermark": "synthid", "grounding": true}'::jsonb
   )
 
-ON CONFLICT (model_id) DO UPDATE SET
+ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
   pricing = EXCLUDED.pricing,
   model_config = EXCLUDED.model_config;
