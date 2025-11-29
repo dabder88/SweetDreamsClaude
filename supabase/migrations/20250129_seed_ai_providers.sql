@@ -123,44 +123,44 @@ VALUES
    '{"intelligence": "medium", "speed": "fastest"}'::jsonb,
    128000, true),
 
-  -- 2. GPT-5 Mini - Optimal
+  -- 2. GPT-5 Mini - Optimal (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'gpt-5-mini', 'GPT-5 Mini', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 0.22, "output": 1.73, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "high", "speed": "fast"}'::jsonb,
    128000, true),
 
-  -- 3. GPT-5 - Premium
+  -- 3. GPT-5 - Premium (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'gpt-5', 'GPT-5', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": true}'::jsonb,
+   '{"text": true, "image": false, "reasoning": true}'::jsonb,
    '{"input": 1.12, "output": 8.96, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "medium"}'::jsonb,
    128000, true),
 
-  -- 4. Claude Sonnet 4.5 - Latest version
+  -- 4. Claude Sonnet 4.5 - Latest version (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'claude-sonnet-4-5-20250929', 'Claude Sonnet 4.5 (2025-09-29)', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": true}'::jsonb,
+   '{"text": true, "image": false, "reasoning": true}'::jsonb,
    '{"input": 3.12, "output": 15.60, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "medium"}'::jsonb,
    200000, true),
 
-  -- 5. Gemini 2.5 Flash - Google's fast model
+  -- 5. Gemini 2.5 Flash - Google's fast model (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'gemini-2.5-flash', 'Gemini 2.5 Flash', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 0.24, "output": 2.00, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "high", "speed": "fastest"}'::jsonb,
    1000000, true),
 
-  -- 6. GPT-4o - Classic OpenAI
+  -- 6. GPT-4o - Classic OpenAI (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'gpt-4o', 'GPT-4o', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 2.50, "output": 10.00, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "medium"}'::jsonb,
    128000, true),
 
-  -- 7. Claude Opus 4 - Maximum intelligence
+  -- 7. Claude Opus 4 - Maximum intelligence (multimodal: can analyze images but NOT generate them)
   ('neuroapi', 'claude-opus-4-20250514', 'Claude Opus 4 (2025-05-14)', 'NeuroAPI',
-   '{"text": true, "image": true, "reasoning": true}'::jsonb,
+   '{"text": true, "image": false, "reasoning": true}'::jsonb,
    '{"input": 18.75, "output": 93.75, "currency": "USD", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "slow"}'::jsonb,
    200000, true),
