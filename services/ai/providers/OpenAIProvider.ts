@@ -37,44 +37,97 @@ export class OpenAIProvider extends BaseProvider {
 
   /**
    * Analyze dream using OpenAI chat completion
+   * Uses two-stage process like Gemini for detailed symbol analysis
    */
   async analyzeDream(dreamData: DreamData): Promise<AnalysisResponse> {
     try {
-      this.log('Starting dream analysis');
+      this.log('Starting dream analysis (two-stage process)');
 
-      const prompt = this.buildPrompt(dreamData);
+      // ===== STAGE 1: Main Analysis + Symbol Names =====
+      const stage1Prompt = this.buildStage1Prompt(dreamData);
       const modelConfig = this.getModelConfig();
 
-      // Call OpenAI API (or AiTunnel/NeuroAPI with same interface)
-      const completion = await this.client.chat.completions.create({
+      const completion1 = await this.client.chat.completions.create({
         model: this.model.model_id,
         messages: [
           {
             role: 'system',
-            content: 'Ты - профессиональный психолог-аналитик снов. Твоя задача - предоставить глубокий, проницательный анализ снов в формате JSON.'
+            content: 'Ты — эксперт-психолог с 20-летним стажем. Пиши структурированно, содержательно, с развернутыми объяснениями. Строго соблюдай JSON формат.'
           },
           {
             role: 'user',
-            content: prompt
+            content: stage1Prompt
           }
         ],
-        response_format: { type: 'json_object' }, // Request JSON response
+        response_format: { type: 'json_object' },
         temperature: modelConfig.temperature,
-        max_tokens: modelConfig.max_tokens,
+        max_tokens: Math.max(modelConfig.max_tokens, 8192),
         top_p: modelConfig.top_p
       });
 
-      // Extract response text
-      const responseText = completion.choices[0]?.message?.content;
-      if (!responseText) {
-        throw new Error('Empty response from AI');
+      const responseText1 = completion1.choices[0]?.message?.content;
+      if (!responseText1) {
+        throw new Error('Empty response from AI (Stage 1)');
       }
 
-      this.log('Analysis completed successfully');
+      const stage1Result = this.parseJsonResponse(responseText1);
+      this.log('Stage 1 completed - extracting symbol names');
 
-      // Parse and validate JSON response
-      const parsedResponse = this.parseJsonResponse(responseText);
-      return this.validateResponse(parsedResponse);
+      // ===== STAGE 2: Detailed Symbol Analysis (PARALLEL) =====
+      const symbolNames: string[] = stage1Result.symbol_names || [];
+      let symbolismData: any[] = [];
+
+      if (symbolNames.length > 0) {
+        this.log(`Stage 2: Analyzing ${symbolNames.length} symbols in parallel`);
+
+        const symbolPromises = symbolNames.map(async (symbolName) => {
+          const symbolPrompt = this.buildSymbolPrompt(symbolName, dreamData);
+
+          try {
+            const symbolCompletion = await this.client.chat.completions.create({
+              model: this.model.model_id,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Ты — эксперт по символам сновидений. Пиши ПОДРОБНО, ГЛУБОКО и РАЗВЕРНУТО. Только русский язык. Строго соблюдай JSON формат.'
+                },
+                {
+                  role: 'user',
+                  content: symbolPrompt
+                }
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.5,
+              max_tokens: 4000, // Отдельный лимит для символов
+              top_p: modelConfig.top_p
+            });
+
+            const symbolText = symbolCompletion.choices[0]?.message?.content;
+            if (symbolText) {
+              return this.parseJsonResponse(symbolText);
+            }
+            return { name: symbolName, meaning: 'Не удалось загрузить подробное толкование символа.' };
+          } catch (err) {
+            this.logError(`Failed to analyze symbol: ${symbolName}`, err);
+            return { name: symbolName, meaning: 'Не удалось загрузить подробное толкование символа.' };
+          }
+        });
+
+        symbolismData = await Promise.all(symbolPromises);
+        this.log(`Stage 2 completed - analyzed ${symbolismData.length} symbols`);
+      }
+
+      // ===== COMBINE RESULTS =====
+      const finalResult = {
+        summary: stage1Result.summary,
+        analysis: stage1Result.analysis,
+        symbolism: symbolismData,
+        advice: stage1Result.advice,
+        questions: stage1Result.questions
+      };
+
+      this.log('Two-stage analysis completed successfully');
+      return this.validateResponse(finalResult);
     } catch (error: any) {
       this.logError('Dream analysis failed', error);
 
@@ -132,6 +185,205 @@ export class OpenAIProvider extends BaseProvider {
       this.logError('Image generation failed', error);
       throw new Error(`Ошибка генерации изображения: ${error.message || 'Неизвестная ошибка'}`);
     }
+  }
+
+  /**
+   * Build Stage 1 prompt: Main analysis + symbol names extraction
+   * This is the first request that gets summary, analysis, advice, questions, and symbol names
+   */
+  private buildStage1Prompt(dreamData: DreamData): string {
+    const { description, context, method } = dreamData;
+
+    // Method-specific instructions
+    const methodPrompts: Record<string, string> = {
+      jungian: 'Используй аналитическую психологию Карла Юнга (архетипы, Тень, Анима/Анимус, коллективное бессознательное).',
+      freudian: 'Используй психоанализ Фрейда (вытесненные желания, эдипов комплекс, скрытые конфликты, либидо).',
+      gestalt: 'Используй принципы Гештальт-терапии (части личности, диалог с объектами сна, "здесь и сейчас").',
+      cognitive: 'Используй когнитивно-эмпирическую модель (связь мыслей, установок и дневного опыта).',
+      existential: 'Используй экзистенциальный подход (свобода, ответственность, поиск смысла, страх смерти).',
+      auto: 'Выбери наиболее подходящую научную психологическую концепцию (Юнг, Фрейд, Гештальт или Экзистенциализм) и явно укажи, какой подход используешь.'
+    };
+
+    const methodPrompt = methodPrompts[method] || methodPrompts.auto;
+
+    return `Ты — профессиональный психоаналитик с 20-летним стажем. Проведи ПЕРВЫЙ ЭТАП анализа сна.
+Язык: РУССКИЙ.
+
+ВХОДНЫЕ ДАННЫЕ:
+- Сон: "${description.substring(0, 3000)}"
+- Эмоция при пробуждении: ${context.emotion}
+- Жизненная ситуация: ${context.lifeSituation}
+- Ассоциации: ${context.associations}
+- Повторяющийся сон: ${context.recurring ? 'Да' : 'Нет'}
+- Дневной остаток: ${context.dayResidue}
+- Типы персонажей: ${context.characterType}
+- Роль во сне: ${context.dreamRole}
+- Телесные ощущения: ${context.physicalSensation}
+
+МЕТОД АНАЛИЗА: ${methodPrompt}
+
+ЗАДАЧА:
+1. Сформируй "summary" (краткая суть сна, 2-3 предложения).
+
+2. Проведи "analysis" (ГЛУБОКИЙ И РАЗВЕРНУТЫЙ анализ):
+   - ОБЯЗАТЕЛЬНО УЧТИ: роль сновидца (например, наблюдатель может указывать на диссоциацию) и телесные реакции (психосоматика)
+   - Используй Markdown-форматирование с заголовками ### для структурирования
+   - МИНИМУМ 4-5 СОДЕРЖАТЕЛЬНЫХ смысловых блоков
+   - Каждый блок должен содержать 3-4 абзаца
+   - Разделяй абзацы двойным переносом (\\n\\n)
+   - Пиши развернуто и глубоко, избегай поверхностных формулировок
+
+3. Дай "advice" (массив строк):
+   - Сгенерируй от 3 до 5 РАЗВЕРНУТЫХ практических рекомендаций
+   - КАЖДАЯ рекомендация должна быть МИНИМУМ 2-3 предложения
+   - Рекомендации должны быть конкретными и применимыми
+   - Каждая рекомендация - отдельный элемент массива
+
+4. Дай "questions" (массив строк):
+   - 3-4 глубоких вопроса для рефлексии
+   - Вопросы должны помогать сновидцу глубже понять себя
+
+5. Выдели "symbol_names" (массив строк):
+   - Выдели 3-5 названий КЛЮЧЕВЫХ символов из сна
+   - НЕ ПИШИ ИХ ЗНАЧЕНИЯ ЗДЕСЬ, только названия
+   - Это будут символы для детального анализа на следующем этапе
+
+ФОРМАТ ОТВЕТА (строго JSON):
+{
+  "summary": "Краткое резюме сна",
+  "analysis": "Подробный анализ с использованием Markdown",
+  "advice": [
+    "Развернутая рекомендация 1 из нескольких предложений",
+    "Развернутая рекомендация 2 из нескольких предложений"
+  ],
+  "questions": [
+    "Глубокий вопрос 1",
+    "Глубокий вопрос 2"
+  ],
+  "symbol_names": [
+    "Символ 1",
+    "Символ 2",
+    "Символ 3"
+  ]
+}
+
+ВАЖНО: Пиши СОДЕРЖАТЕЛЬНО и РАЗВЕРНУТО. Короткие ответы неприемлемы.`;
+  }
+
+  /**
+   * Build Stage 2 prompt: Detailed analysis of a specific symbol
+   * This creates individual requests for each symbol identified in Stage 1
+   */
+  private buildSymbolPrompt(symbolName: string, dreamData: DreamData): string {
+    const { description, context } = dreamData;
+
+    return `АНАЛИЗ СИМВОЛА: "${symbolName}"
+
+ПОЛНЫЙ КОНТЕКСТ СНА: "${description}"
+ЖИЗНЕННАЯ СИТУАЦИЯ: ${context.lifeSituation}
+РОЛЬ ВО СНЕ: ${context.dreamRole}
+ТЕЛЕСНЫЕ ОЩУЩЕНИЯ: ${context.physicalSensation}
+ЭМОЦИЯ: ${context.emotion}
+
+ЗАДАЧА:
+Напиши МАКСИМАЛЬНО ПОДРОБНОЕ толкование символа "${symbolName}" в контексте этого сна и состояния человека.
+
+ТРЕБОВАНИЯ:
+1. ЯЗЫК: ТОЛЬКО РУССКИЙ
+2. ОБЪЕМ: 3-4 развернутых абзаца (минимум 800 знаков)
+3. ГЛУБИНА: Объясни психологическое значение, связь с жизненной ситуацией, возможные послания подсознания
+4. ФОРМАТ: Строго JSON
+
+ФОРМАТ ОТВЕТА:
+{
+  "name": "${symbolName}",
+  "meaning": "Очень подробное толкование символа на 3-4 абзаца..."
+}
+
+ВАЖНО: Пиши МАКСИМАЛЬНО ПОДРОБНО И РАЗВЕРНУТО. Минимум 800 знаков в поле "meaning".`;
+  }
+
+  /**
+   * Build detailed prompt with specific volume requirements
+   * DEPRECATED: Replaced by two-stage process (buildStage1Prompt + buildSymbolPrompt)
+   * Kept for reference
+   */
+  private buildDetailedPrompt(dreamData: DreamData): string {
+    const { description, context, method } = dreamData;
+
+    // Method-specific instructions
+    const methodPrompts: Record<string, string> = {
+      jungian: 'Используй аналитическую психологию Карла Юнга (архетипы, Тень, Анима/Анимус, коллективное бессознательное).',
+      freudian: 'Используй психоанализ Фрейда (вытесненные желания, эдипов комплекс, скрытые конфликты, либидо).',
+      gestalt: 'Используй принципы Гештальт-терапии (части личности, диалог с объектами сна, "здесь и сейчас").',
+      cognitive: 'Используй когнитивно-эмпирическую модель (связь мыслей, установок и дневного опыта).',
+      existential: 'Используй экзистенциальный подход (свобода, ответственность, поиск смысла, страх смерти).',
+      auto: 'Выберите наиболее подходящую научную психологическую концепцию (Юнг, Фрейд, Гештальт или Экзистенциализм) и явно укажи, какой подход используешь.'
+    };
+
+    const methodPrompt = methodPrompts[method] || methodPrompts.auto;
+
+    return `Ты — профессиональный психоаналитик с 20-летним стажем. Проведи ГЛУБОКИЙ И РАЗВЕРНУТЫЙ анализ сна.
+Язык: РУССКИЙ.
+
+ВХОДНЫЕ ДАННЫЕ:
+- Сон: "${description.substring(0, 3000)}"
+- Эмоция при пробуждении: ${context.emotion}
+- Жизненная ситуация: ${context.lifeSituation}
+- Ассоциации: ${context.associations}
+- Повторяющийся сон: ${context.recurring ? 'Да' : 'Нет'}
+- Дневной остаток: ${context.dayResidue}
+- Типы персонажей: ${context.characterType}
+- Роль во сне: ${context.dreamRole}
+- Телесные ощущения: ${context.physicalSensation}
+
+МЕТОД АНАЛИЗА: ${methodPrompt}
+
+ЗАДАЧА:
+1. Сформируй "summary" (краткая суть сна, 2-3 предложения).
+
+2. Проведи "analysis" (ГЛУБОКИЙ И РАЗВЕРНУТЫЙ анализ):
+   - ОБЯЗАТЕЛЬНО УЧТИ: роль сновидца (например, наблюдатель может указывать на диссоциацию) и телесные реакции (психосоматика)
+   - Используй Markdown-форматирование с заголовками ### для структурирования
+   - МИНИМУМ 4-5 СОДЕРЖАТЕЛЬНЫХ смысловых блоков
+   - Каждый блок должен содержать 3-4 абзаца
+   - Разделяй абзацы двойным переносом (\\n\\n)
+   - Пиши развернуто и глубоко, избегай поверхностных формулировок
+
+3. Сформируй "symbolism" (массив объектов с символами):
+   - Выдели 3-5 ключевых символов из сна
+   - Для каждого символа создай объект: {"name": "Название символа", "meaning": "Подробное объяснение значения символа в контексте этого сна"}
+   - Каждое "meaning" должно быть РАЗВЕРНУТЫМ (минимум 3-4 предложения)
+
+4. Дай "advice" (массив строк):
+   - Сгенерируй от 3 до 5 РАЗВЕРНУТЫХ практических рекомендаций
+   - КАЖДАЯ рекомендация должна быть МИНИМУМ 2-3 предложения
+   - Рекомендации должны быть конкретными и применимыми
+   - Каждая рекомендация - отдельный элемент массива
+
+5. Дай "questions" (массив строк):
+   - 3-4 глубоких вопроса для рефлексии
+   - Вопросы должны помогать сновидцу глубже понять себя
+
+ФОРМАТ ОТВЕТА (строго JSON):
+{
+  "summary": "Краткое резюме сна",
+  "analysis": "Подробный анализ с использованием Markdown",
+  "symbolism": [
+    {"name": "Символ 1", "meaning": "Развернутое значение символа 1"},
+    {"name": "Символ 2", "meaning": "Развернутое значение символа 2"}
+  ],
+  "advice": [
+    "Развернутая рекомендация 1 из нескольких предложений",
+    "Развернутая рекомендация 2 из нескольких предложений"
+  ],
+  "questions": [
+    "Глубокий вопрос 1",
+    "Глубокий вопрос 2"
+  ]
+}
+
+ВАЖНО: Пиши СОДЕРЖАТЕЛЬНО и РАЗВЕРНУТО. Короткие ответы неприемлемы.`;
   }
 
   /**

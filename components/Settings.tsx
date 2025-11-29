@@ -16,7 +16,7 @@ import {
   getCurrentUser
 } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
-import { visualizeDream } from '../services/geminiService';
+import { generateImage } from '../services/ai/aiService';
 
 interface SettingsProps {
   user: UserType | null;
@@ -278,14 +278,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
       prompt += `Эмоция сна: ${randomEntry.dreamData.context.emotion}. `;
       prompt += 'Стиль: сюрреалистический, мистический, как иллюстрация к сновидению. Без текста и надписей.';
 
-      // Generate image using visualizeDream (it uses gemini-2.0-flash-exp)
-      const mockDreamData = {
-        description: prompt,
-        context: randomEntry.dreamData.context,
-        method: randomEntry.dreamData.method
-      };
-
-      const imageDataUrl = await visualizeDream(mockDreamData);
+      // Generate image using AI service
+      const imageDataUrl = await generateImage(prompt);
 
       if (!imageDataUrl) {
         alert('Не удалось сгенерировать изображение');

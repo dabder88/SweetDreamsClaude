@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { analyzeDream, visualizeDream } from '../services/geminiService';
+import { analyzeDream, generateImage } from '../services/ai/aiService';
 import { saveJournalEntry, markArchetypeProfileAsStale } from '../services/supabaseStorageService';
 import { incrementAnalyzedDreams, recordMethodUsage, recordEmotion, recordSymbols } from '../services/statsService';
 import { saveAnalysisMetadata } from '../services/analysisMetadataService';
@@ -200,7 +200,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onReset, onSaveSt
     if (imageUrl) return;
     setImageLoading(true);
     try {
-      const url = await visualizeDream(data.description);
+      const url = await generateImage(data.description);
       setImageUrl(url);
 
       // Pass image URL to parent

@@ -168,12 +168,17 @@ ${description}
 
   /**
    * Get model configuration (temperature, max_tokens, etc.)
+   * Priority: model.model_config > provider.config > defaults
    */
   protected getModelConfig() {
+    // Use model-specific config if available, otherwise fall back to provider config
+    const modelConfig = this.model.model_config || {};
+    const providerConfig = this.config.config || {};
+
     return {
-      temperature: this.config.config.temperature || 0.7,
-      max_tokens: this.config.config.max_tokens || 4096,
-      top_p: this.config.config.top_p || 1.0
+      temperature: modelConfig.temperature ?? providerConfig.temperature ?? 0.4,
+      max_tokens: modelConfig.max_tokens ?? providerConfig.max_tokens ?? 8192,
+      top_p: modelConfig.top_p ?? providerConfig.top_p ?? 1.0
     };
   }
 

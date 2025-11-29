@@ -13,24 +13,25 @@ INSERT INTO ai_provider_configs (provider_type, provider_name, is_active, api_ke
 VALUES
   -- Gemini (currently active by default)
   ('gemini', 'Google Gemini', true, 'VITE_API_KEY', 'https://generativelanguage.googleapis.com',
-   '{"temperature": 0.7, "max_tokens": 4096}'::jsonb),
+   '{"temperature": 0.4, "max_tokens": 8192}'::jsonb),
 
   -- AiTunnel (Russian intermediary, Ruble pricing)
   ('aitunnel', 'AiTunnel', false, 'VITE_AITUNNEL_KEY', 'https://api.aitunnel.ru/v1',
-   '{"temperature": 0.7, "max_tokens": 4096}'::jsonb),
+   '{"temperature": 0.4, "max_tokens": 8192}'::jsonb),
 
   -- NeuroAPI (International intermediary, USD pricing)
   ('neuroapi', 'NeuroAPI', false, 'VITE_NEUROAPI_KEY', 'https://neuroapi.host/v1',
-   '{"temperature": 0.7, "max_tokens": 4096}'::jsonb),
+   '{"temperature": 0.4, "max_tokens": 8192}'::jsonb),
 
   -- OpenAI Direct
   ('openai', 'OpenAI Direct', false, 'VITE_OPENAI_KEY', 'https://api.openai.com/v1',
-   '{"temperature": 0.7, "max_tokens": 4096}'::jsonb),
+   '{"temperature": 0.4, "max_tokens": 8192}'::jsonb),
 
   -- Claude/Anthropic Direct
   ('claude', 'Anthropic Claude', false, 'VITE_CLAUDE_KEY', 'https://api.anthropic.com',
-   '{"temperature": 0.7, "max_tokens": 4096}'::jsonb)
-ON CONFLICT (provider_type) DO NOTHING;
+   '{"temperature": 0.4, "max_tokens": 8192}'::jsonb)
+ON CONFLICT (provider_type) DO UPDATE SET
+  config = EXCLUDED.config;
 
 -- =====================================================
 -- STEP 2: Insert TOP-10 Models for AiTunnel (Rubles)

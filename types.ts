@@ -300,5 +300,11 @@ export interface AIModel {
   };
   context_length: number; // Maximum context window in tokens
   is_available: boolean;
+  model_config?: {
+    temperature?: number;
+    max_tokens?: number;
+    top_p?: number;
+    [key: string]: any;
+  };
   created_at: string;
 }
