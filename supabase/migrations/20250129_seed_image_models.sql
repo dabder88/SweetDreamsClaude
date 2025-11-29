@@ -101,7 +101,7 @@ ON CONFLICT (provider_type, model_id) DO UPDATE SET
   pricing = EXCLUDED.pricing;
 
 -- =====================================================
--- NeuroAPI Image Models (DALL-E via international intermediary)
+-- NeuroAPI Image Models (via international intermediary)
 -- =====================================================
 
 INSERT INTO ai_models (
@@ -129,11 +129,54 @@ VALUES
     0,
     true,
     '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  ),
+
+  -- GPT Image 1 via NeuroAPI (Premium quality)
+  (
+    'neuroapi',
+    'gpt-image-1',
+    'GPT Image 1',
+    'NeuroAPI',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 4.28, "output": 34.28, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "slow", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Gemini 2.5 Flash Image via NeuroAPI (Fast and cheap)
+  (
+    'neuroapi',
+    'gemini-2.5-flash-image',
+    'Gemini 2.5 Flash Image',
+    'NeuroAPI',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 0.15, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "very fast", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Gemini 3 Pro Image Preview via NeuroAPI (Premium 4K)
+  (
+    'neuroapi',
+    'gemini-3-pro-image-preview',
+    'Gemini 3 Pro Image Preview',
+    'NeuroAPI',
+    '{"text": false, "image": true, "reasoning": true}'::jsonb,
+    '{"input": 0, "output": 0.47, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "fast", "intelligence": "very high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "resolution": "4K"}'::jsonb
   )
 
 ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
-  pricing = EXCLUDED.pricing;
+  pricing = EXCLUDED.pricing,
+  model_config = EXCLUDED.model_config;
 
 -- =====================================================
 -- Google Gemini Image Models
@@ -221,11 +264,11 @@ SET default_model_id_for_images = (
 )
 WHERE provider_type = 'aitunnel';
 
--- NeuroAPI: DALL-E 3
+-- NeuroAPI: Gemini 2.5 Flash Image (cheapest and fastest)
 UPDATE ai_provider_configs
 SET default_model_id_for_images = (
   SELECT id FROM ai_models
-  WHERE provider_type = 'neuroapi' AND model_id = 'dall-e-3'
+  WHERE provider_type = 'neuroapi' AND model_id = 'gemini-2.5-flash-image'
   LIMIT 1
 )
 WHERE provider_type = 'neuroapi';
@@ -245,7 +288,7 @@ WHERE provider_type = 'gemini';
 -- Added image generation models:
 -- - OpenAI: dall-e-3, dall-e-3-hd
 -- - AiTunnel: dall-e-3 (RUB pricing)
--- - NeuroAPI: dall-e-3 (USD pricing)
+-- - NeuroAPI: dall-e-3, gpt-image-1, gemini-2.5-flash-image, gemini-3-pro-image-preview
 -- - Gemini: imagen-3.0-generate-002, gemini-2.0-flash-exp, gemini-3-pro-image-preview
 --
 -- Note: Claude does NOT support image generation natively

@@ -158,7 +158,7 @@ export class OpenAIProvider extends BaseProvider {
 
   /**
    * Generate dream visualization image
-   * Note: Not all OpenAI-compatible APIs support image generation
+   * Works with OpenAI, AiTunnel, and NeuroAPI (all use OpenAI-compatible API)
    */
   async generateImage(prompt: string): Promise<string> {
     try {
@@ -172,30 +172,31 @@ export class OpenAIProvider extends BaseProvider {
         throw new Error(`Модель ${this.model.model_name} не поддерживает генерацию изображений`);
       }
 
-      // For OpenAI Direct, use DALL-E
-      if (this.config.provider_type === 'openai') {
-        const response = await this.client.images.generate({
-          model: 'dall-e-3',
-          prompt: prompt,
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard'
-        });
+      // Get model config for size and quality settings
+      const modelConfig = this.model.model_config || {};
+      const size = modelConfig.size || '1024x1024';
+      const quality = modelConfig.quality || 'standard';
 
-        const imageUrl = response.data[0]?.url;
-        if (!imageUrl) {
-          throw new Error('No image URL in response');
-        }
+      this.log(`Generating image with model: ${this.model.model_id}, size: ${size}, quality: ${quality}`);
 
-        // Convert URL to base64 (download image)
-        const base64Image = await this.urlToBase64(imageUrl);
-        this.log('Image generated successfully');
-        return base64Image;
+      // All OpenAI-compatible APIs use the same images.generate endpoint
+      const response = await this.client.images.generate({
+        model: this.model.model_id, // Use the selected model (dall-e-3, gpt-image-1, etc.)
+        prompt: prompt,
+        n: 1,
+        size: size as any,
+        quality: quality as any
+      });
+
+      const imageUrl = response.data[0]?.url;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
       }
 
-      // For AiTunnel/NeuroAPI, image generation may use different endpoints
-      // This is a placeholder - implement based on specific provider capabilities
-      throw new Error(`Генерация изображений не поддерживается для ${this.config.provider_name}`);
+      // Convert URL to base64 (download image)
+      const base64Image = await this.urlToBase64(imageUrl);
+      this.log('Image generated successfully');
+      return base64Image;
     } catch (error: any) {
       this.logError('Image generation failed', error);
       throw new Error(`Ошибка генерации изображения: ${error.message || 'Неизвестная ошибка'}`);
