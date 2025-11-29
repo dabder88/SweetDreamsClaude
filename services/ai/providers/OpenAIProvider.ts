@@ -180,25 +180,53 @@ export class OpenAIProvider extends BaseProvider {
       this.log(`Generating image with model: ${this.model.model_id}, size: ${size}, quality: ${quality}`);
 
       // All OpenAI-compatible APIs use the same images.generate endpoint
-      // IMPORTANT: Use b64_json format to avoid CORS issues when downloading from Azure blob storage
-      const response = await this.client.images.generate({
-        model: this.model.model_id, // Use the selected model (dall-e-3, gpt-image-1, etc.)
+      // Try b64_json first (faster, no CORS issues), fall back to URL if needed
+      let response;
+      try {
+        this.log('Attempting b64_json format');
+        response = await this.client.images.generate({
+          model: this.model.model_id,
+          prompt: prompt,
+          n: 1,
+          size: size as any,
+          quality: quality as any,
+          response_format: 'b64_json'
+        });
+
+        // Check if we got base64 data
+        const b64Json = response.data[0]?.b64_json;
+        if (b64Json) {
+          const base64Image = `data:image/png;base64,${b64Json}`;
+          this.log('Image generated successfully (b64_json format)');
+          return base64Image;
+        }
+
+        this.log('No b64_json in response, will try URL format');
+      } catch (b64Error: any) {
+        this.log(`b64_json format failed: ${b64Error.message}, trying URL format`);
+      }
+
+      // Fall back to URL format and download the image
+      this.log('Requesting URL format');
+      response = await this.client.images.generate({
+        model: this.model.model_id,
         prompt: prompt,
         n: 1,
         size: size as any,
         quality: quality as any,
-        response_format: 'b64_json' // Get base64 directly, avoid CORS issues
+        response_format: 'url'
       });
 
-      // Get base64 data from response
-      const b64Json = response.data[0]?.b64_json;
-      if (!b64Json) {
-        throw new Error('No base64 image data in response');
+      const imageUrl = response.data[0]?.url;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
       }
 
-      // Convert to data URL format
-      const base64Image = `data:image/png;base64,${b64Json}`;
-      this.log('Image generated successfully');
+      this.log(`Image URL received, downloading: ${imageUrl}`);
+
+      // Download image from URL and convert to base64
+      const base64Image = await this.downloadImageAsBase64(imageUrl);
+      this.log('Image downloaded and converted to base64 successfully');
       return base64Image;
     } catch (error: any) {
       this.logError('Image generation failed', error);
