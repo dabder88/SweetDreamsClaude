@@ -4,6 +4,7 @@ import { LayoutDashboard, BookOpen, BarChart2, Ghost, Settings, LogOut, User, Ho
 import { AppView, User as UserType } from '../types';
 import { signOut } from '../services/authService';
 import { isSupabaseConfigured } from '../services/supabaseClient';
+import AvatarModal from './AvatarModal';
 
 interface SidebarProps {
   currentView: AppView;
@@ -15,6 +16,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user, adminSubView, onAdminSubViewChange }) => {
   const [adminMenuExpanded, setAdminMenuExpanded] = useState(currentView === 'admin');
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   const handleLogout = async () => {
     if (isSupabaseConfigured() && user) {
@@ -65,7 +67,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user, admi
     <aside className="w-full md:w-72 h-screen sticky top-0 flex flex-col border-r border-white/5 bg-slate-900/80 backdrop-blur-xl z-50">
       {/* Profile Section */}
       <div className="p-8 flex flex-col items-center border-b border-white/5">
-        <div className="w-24 h-24 rounded-full p-1 border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-4 relative group cursor-pointer">
+        <div
+          className="w-24 h-24 rounded-full p-1 border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-4 relative group cursor-pointer"
+          onClick={() => user?.avatar_url && setAvatarModalOpen(true)}
+          title={user?.avatar_url ? "Нажмите, чтобы увеличить" : undefined}
+        >
            <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden relative">
               {user?.avatar_url ? (
                 <img
@@ -184,6 +190,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, user, admi
           <span className="font-medium">{user ? 'Выйти из аккаунта' : 'Выйти на главную'}</span>
         </button>
       </div>
+
+      {/* Avatar Modal */}
+      {user?.avatar_url && (
+        <AvatarModal
+          isOpen={avatarModalOpen}
+          onClose={() => setAvatarModalOpen(false)}
+          avatarUrl={user.avatar_url}
+          userName={user.name || user.email.split('@')[0]}
+        />
+      )}
     </aside>
   );
 };

@@ -67,3 +67,32 @@ h1, h2, h3, h4, h5, h6 {
   border-width: 1px;
   border-style: solid;
 }
+
+/* Modal Animations */
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeInModal 0.2s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleInModal 0.3s ease-out forwards;
+}
