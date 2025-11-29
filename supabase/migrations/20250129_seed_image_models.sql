@@ -66,7 +66,7 @@ ON CONFLICT (provider_type, model_id) DO UPDATE SET
   model_config = EXCLUDED.model_config;
 
 -- =====================================================
--- AiTunnel Image Models (DALL-E via Russian intermediary)
+-- AiTunnel Image Models (via Russian intermediary)
 -- =====================================================
 
 INSERT INTO ai_models (
@@ -94,11 +94,68 @@ VALUES
     0,
     true,
     '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  ),
+
+  -- GPT Image 1 via AiTunnel
+  (
+    'aitunnel',
+    'gpt-image-1',
+    'GPT Image 1',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 320.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "slow", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Qwen Image Edit via AiTunnel
+  (
+    'aitunnel',
+    'qwen-image-edit',
+    'Qwen Image Edit',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 200.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "medium"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Gemini 2.5 Flash Image via AiTunnel
+  (
+    'aitunnel',
+    'gemini-2.5-flash-image',
+    'Gemini 2.5 Flash Image',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 54, "output": 450, "currency": "RUB", "per_tokens": 1000000, "per_image": 0}'::jsonb,
+    '{"speed": "very fast", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Gemini 3 Pro Image Preview via AiTunnel
+  (
+    'aitunnel',
+    'gemini-3-pro-image-preview',
+    'Gemini 3 Pro Image Preview',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": true}'::jsonb,
+    '{"input": 360, "output": 2160, "currency": "RUB", "per_tokens": 1000000, "per_image": 0}'::jsonb,
+    '{"speed": "fast", "intelligence": "very high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "resolution": "4K"}'::jsonb
   )
 
 ON CONFLICT (provider_type, model_id) DO UPDATE SET
   capabilities = EXCLUDED.capabilities,
-  pricing = EXCLUDED.pricing;
+  pricing = EXCLUDED.pricing,
+  model_config = EXCLUDED.model_config;
 
 -- =====================================================
 -- NeuroAPI Image Models (via international intermediary)
@@ -255,11 +312,11 @@ SET default_model_id_for_images = (
 )
 WHERE provider_type = 'openai';
 
--- AiTunnel: DALL-E 3
+-- AiTunnel: Gemini 2.5 Flash Image (cheapest and fastest)
 UPDATE ai_provider_configs
 SET default_model_id_for_images = (
   SELECT id FROM ai_models
-  WHERE provider_type = 'aitunnel' AND model_id = 'dall-e-3'
+  WHERE provider_type = 'aitunnel' AND model_id = 'gemini-2.5-flash-image'
   LIMIT 1
 )
 WHERE provider_type = 'aitunnel';
@@ -287,7 +344,7 @@ WHERE provider_type = 'gemini';
 -- =====================================================
 -- Added image generation models:
 -- - OpenAI: dall-e-3, dall-e-3-hd
--- - AiTunnel: dall-e-3 (RUB pricing)
+-- - AiTunnel: dall-e-3, gpt-image-1, qwen-image-edit, gemini-2.5-flash-image, gemini-3-pro-image-preview (RUB pricing)
 -- - NeuroAPI: dall-e-3, gpt-image-1, gemini-2.5-flash-image, gemini-3-pro-image-preview
 -- - Gemini: imagen-3.0-generate-002, gemini-2.0-flash-exp, gemini-3-pro-image-preview
 --
