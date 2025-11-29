@@ -44,6 +44,8 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -95,6 +97,11 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     setProviderTemperature(provider.config.temperature || 0.4);
     setProviderMaxTokens(provider.config.max_tokens || 8192);
 
+    // Open modal immediately with loading state
+    setShowConfigModal(true);
+    setLoadingModels(true);
+    setAvailableModels([]); // Clear previous models
+
     // Load available models for this provider filtered by task type
     try {
       const models = await getModelsForTask(provider.provider_type, taskType);
@@ -106,21 +113,24 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
         : provider.default_model_id_for_images;
       setSelectedModel(defaultModelId || models[0]?.id || '');
 
-      // Initialize model configurations
+      // Initialize model configurations (optimized - only create configs, don't iterate unnecessarily)
       const configs: Record<string, { temperature: number; max_tokens: number }> = {};
+      const defaultTemp = provider.config.temperature || 0.4;
+      const defaultMaxTokens = provider.config.max_tokens || 8192;
+
       models.forEach(model => {
         configs[model.id] = {
-          temperature: model.model_config?.temperature || provider.config.temperature || 0.4,
-          max_tokens: model.model_config?.max_tokens || provider.config.max_tokens || 8192
+          temperature: model.model_config?.temperature || defaultTemp,
+          max_tokens: model.model_config?.max_tokens || defaultMaxTokens
         };
       });
       setModelConfigs(configs);
     } catch (err) {
       console.error('Failed to load models:', err);
       setAvailableModels([]);
+    } finally {
+      setLoadingModels(false);
     }
-
-    setShowConfigModal(true);
   };
 
   // Save configuration and activate provider
@@ -130,49 +140,54 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
       return;
     }
 
+    // Set saving state and close modal immediately
+    setSaving(true);
+    setShowConfigModal(false);
+
     try {
       // Determine which field to update based on task type
       const defaultModelField = selectedTaskType === 'text'
         ? 'default_model_id_for_text'
         : 'default_model_id_for_images';
 
-      // Update provider configuration (default params + selected model for task)
-      await updateProviderConfig(selectedProvider.id, {
-        [defaultModelField]: selectedModel,
-        config: {
-          temperature: providerTemperature,
-          max_tokens: providerMaxTokens,
-          top_p: 1.0
-        }
-      });
+      // Get the currently selected model's config
+      const selectedModelConfig = modelConfigs[selectedModel];
 
-      // Update each model's configuration
-      for (const model of availableModels) {
-        const modelConfig = modelConfigs[model.id];
-        if (modelConfig) {
-          await updateModel(model.id, {
-            model_config: {
-              temperature: modelConfig.temperature,
-              max_tokens: modelConfig.max_tokens,
-              top_p: 1.0
-            }
-          });
-        }
-      }
+      // Run all operations in parallel for better performance
+      await Promise.all([
+        // Update provider configuration (default params + selected model for task)
+        updateProviderConfig(selectedProvider.id, {
+          [defaultModelField]: selectedModel,
+          config: {
+            temperature: providerTemperature,
+            max_tokens: providerMaxTokens,
+            top_p: 1.0
+          }
+        }),
 
-      // Activate provider for this specific task type
-      await setActiveProviderForTask(selectedProvider.id, selectedTaskType);
+        // Update ONLY the selected model's configuration (not all models!)
+        selectedModelConfig ? updateModel(selectedModel, {
+          model_config: {
+            temperature: selectedModelConfig.temperature,
+            max_tokens: selectedModelConfig.max_tokens,
+            top_p: 1.0
+          }
+        }) : Promise.resolve(),
 
-      // Reload providers
+        // Activate provider for this specific task type
+        setActiveProviderForTask(selectedProvider.id, selectedTaskType)
+      ]);
+
+      // Reload providers after all updates
       await loadProviders();
-
-      setShowConfigModal(false);
 
       const taskLabel = selectedTaskType === 'text' ? 'текстов' : 'изображений';
       alert(`Провайдер ${selectedProvider.provider_name} активирован для ${taskLabel}!`);
     } catch (err: any) {
       console.error('Failed to save configuration:', err);
       alert(`Ошибка: ${err.message || 'Не удалось сохранить настройки'}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -281,7 +296,8 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   };
 
   // Model selection card
-  const ModelCard = ({ model, isSelected, onSelect }: { model: AIModel; isSelected: boolean; onSelect: () => void }) => {
+  // Memoized ModelCard component for better performance with large lists
+  const ModelCard = React.memo(({ model, isSelected, onSelect }: { model: AIModel; isSelected: boolean; onSelect: () => void }) => {
     return (
       <button
         onClick={onSelect}
@@ -332,7 +348,7 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
         )}
       </button>
     );
-  };
+  });
 
   return (
     <div className="min-h-screen">
@@ -353,12 +369,21 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
           </div>
           <div className="flex-1">
             <h1 className="text-3xl font-serif font-bold text-white">AI Провайдеры</h1>
-            <p className="text-slate-400 text-sm">Управление AI провайдерами и моделями</p>
+            <p className="text-slate-400 text-sm">
+              {saving ? (
+                <span className="flex items-center gap-2 text-emerald-400">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Сохранение настроек...
+                </span>
+              ) : (
+                'Управление AI провайдерами и моделями'
+              )}
+            </p>
           </div>
           <button
             type="button"
             onClick={() => loadProviders(true)}
-            disabled={refreshing}
+            disabled={refreshing || saving}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
           >
             <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
@@ -503,18 +528,26 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
               {/* Model Selection */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Выберите модель</h3>
-                {availableModels.length === 0 ? (
+                {loadingModels ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
+                    <p className="text-slate-400 text-sm">Загрузка моделей...</p>
+                  </div>
+                ) : availableModels.length === 0 ? (
                   <p className="text-slate-400 text-center py-8">Нет доступных моделей для этого провайдера</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {availableModels.map(model => (
-                      <ModelCard
-                        key={model.id}
-                        model={model}
-                        isSelected={selectedModel === model.id}
-                        onSelect={() => setSelectedModel(model.id)}
-                      />
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+                    {availableModels.map(model => {
+                      const handleSelectModel = () => setSelectedModel(model.id);
+                      return (
+                        <ModelCard
+                          key={model.id}
+                          model={model}
+                          isSelected={selectedModel === model.id}
+                          onSelect={handleSelectModel}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -655,10 +688,17 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
               <button
                 type="button"
                 onClick={handleSaveAndActivate}
-                disabled={!selectedModel}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors"
+                disabled={!selectedModel || saving || loadingModels}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center gap-2"
               >
-                Сохранить и активировать
+                {saving ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Сохранение...
+                  </>
+                ) : (
+                  'Сохранить и активировать'
+                )}
               </button>
             </div>
           </div>
