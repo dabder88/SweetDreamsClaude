@@ -180,21 +180,24 @@ export class OpenAIProvider extends BaseProvider {
       this.log(`Generating image with model: ${this.model.model_id}, size: ${size}, quality: ${quality}`);
 
       // All OpenAI-compatible APIs use the same images.generate endpoint
+      // IMPORTANT: Use b64_json format to avoid CORS issues when downloading from Azure blob storage
       const response = await this.client.images.generate({
         model: this.model.model_id, // Use the selected model (dall-e-3, gpt-image-1, etc.)
         prompt: prompt,
         n: 1,
         size: size as any,
-        quality: quality as any
+        quality: quality as any,
+        response_format: 'b64_json' // Get base64 directly, avoid CORS issues
       });
 
-      const imageUrl = response.data[0]?.url;
-      if (!imageUrl) {
-        throw new Error('No image URL in response');
+      // Get base64 data from response
+      const b64Json = response.data[0]?.b64_json;
+      if (!b64Json) {
+        throw new Error('No base64 image data in response');
       }
 
-      // Convert URL to base64 (download image)
-      const base64Image = await this.urlToBase64(imageUrl);
+      // Convert to data URL format
+      const base64Image = `data:image/png;base64,${b64Json}`;
       this.log('Image generated successfully');
       return base64Image;
     } catch (error: any) {
