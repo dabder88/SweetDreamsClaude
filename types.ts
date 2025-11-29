@@ -106,21 +106,7 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
-export interface AIProviderConfig {
-  id: string;
-  provider_type: 'gemini' | 'openai' | 'anthropic' | 'custom';
-  config_name: string;
-  api_key_encrypted?: string;
-  model_name: string;
-  parameters: {
-    temperature?: number;
-    max_tokens?: number;
-    [key: string]: any;
-  };
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// AIProviderConfig is now defined in the "AI PROVIDER MANAGEMENT TYPES" section below (line 269+)
 
 export interface UsageMetric {
   id: string;
@@ -259,14 +245,35 @@ export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year' | 'all';
 
 export type AIProviderType = 'gemini' | 'openai' | 'claude' | 'aitunnel' | 'neuroapi' | 'custom';
 
+/**
+ * AI Task Type - determines which models are available
+ * - 'text': Dream analysis, reports (text-only models)
+ * - 'image': Dream visualization, avatar generation (image generation models)
+ */
+export type AITaskType = 'text' | 'image';
+
 export interface AIProviderConfig {
   id: string;
   provider_type: AIProviderType;
   provider_name: string;
+
+  // Legacy field (deprecated, use task-specific fields instead)
   is_active: boolean;
+
+  // Task-specific activation
+  is_active_for_text?: boolean; // Active for text generation tasks (dream analysis)
+  is_active_for_images?: boolean; // Active for image generation tasks (visualization, avatars)
+
   api_key_env_name?: string; // Name of environment variable (e.g., 'VITE_AITUNNEL_KEY')
   base_url?: string; // Base URL for API calls
+
+  // Legacy field (deprecated, use task-specific fields instead)
   default_model_id?: string; // UUID reference to ai_models table
+
+  // Task-specific default models
+  default_model_id_for_text?: string; // Default model for text tasks
+  default_model_id_for_images?: string; // Default model for image tasks
+
   config: {
     temperature?: number;
     max_tokens?: number;

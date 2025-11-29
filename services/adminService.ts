@@ -18,7 +18,8 @@ import {
   PsychMethod,
   AIProviderConfig,
   AIModel,
-  AIProviderType
+  AIProviderType,
+  AITaskType
 } from '../types';
 import { PSYCH_METHODS } from '../constants';
 
@@ -1726,6 +1727,97 @@ export const deleteModel = async (modelId: string): Promise<void> => {
     if (error) throw error;
   } catch (err) {
     console.error('Error in deleteModel:', err);
+    throw err;
+  }
+};
+
+// =====================================================
+// TASK-SPECIFIC AI PROVIDER FUNCTIONS (NEW)
+// =====================================================
+
+/**
+ * Get active AI provider for a specific task type
+ * @param taskType - 'text' for dream analysis or 'image' for visualization
+ */
+export const getActiveProviderForTask = async (taskType: AITaskType): Promise<AIProviderConfig | null> => {
+  try {
+    const field = taskType === 'text' ? 'is_active_for_text' : 'is_active_for_images';
+
+    const { data, error } = await supabase
+      .from('ai_provider_configs')
+      .select('*')
+      .eq(field, true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+    return data || null;
+  } catch (err) {
+    console.error(`Error in getActiveProviderForTask(${taskType}):`, err);
+    return null;
+  }
+};
+
+/**
+ * Set active AI provider for a specific task type
+ * Deactivates all other providers for this task type
+ * @param providerId - Provider UUID to activate
+ * @param taskType - 'text' for dream analysis or 'image' for visualization
+ */
+export const setActiveProviderForTask = async (providerId: string, taskType: AITaskType): Promise<void> => {
+  try {
+    const field = taskType === 'text' ? 'is_active_for_text' : 'is_active_for_images';
+
+    // 1. Deactivate all providers for this task type
+    const { error: deactivateError } = await supabase
+      .from('ai_provider_configs')
+      .update({ [field]: false })
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all rows
+
+    if (deactivateError) throw deactivateError;
+
+    // 2. Activate selected provider for this task type
+    const { error: activateError } = await supabase
+      .from('ai_provider_configs')
+      .update({
+        [field]: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', providerId);
+
+    if (activateError) throw activateError;
+
+    console.log(`Successfully activated provider ${providerId} for task: ${taskType}`);
+  } catch (err) {
+    console.error(`Error in setActiveProviderForTask(${providerId}, ${taskType}):`, err);
+    throw err;
+  }
+};
+
+/**
+ * Get models suitable for a specific task type
+ * Filters models based on their capabilities (text vs image)
+ * @param providerType - Provider type (e.g., 'gemini', 'openai')
+ * @param taskType - 'text' for text-only models or 'image' for image-generation models
+ */
+export const getModelsForTask = async (
+  providerType: AIProviderType,
+  taskType: AITaskType
+): Promise<AIModel[]> => {
+  try {
+    const capabilityField = taskType === 'image' ? 'capabilities->image' : 'capabilities->text';
+
+    const { data, error } = await supabase
+      .from('ai_models')
+      .select('*')
+      .eq('provider_type', providerType)
+      .eq('is_available', true)
+      .eq(capabilityField, true) // Filter by capability
+      .order('pricing->input', { ascending: true }); // Sort by price (cheapest first)
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error(`Error in getModelsForTask(${providerType}, ${taskType}):`, err);
     throw err;
   }
 };

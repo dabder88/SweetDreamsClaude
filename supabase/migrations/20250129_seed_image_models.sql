@@ -1,0 +1,241 @@
+-- =====================================================
+-- Seed Image Generation Models
+-- =====================================================
+-- Adds models capable of generating images from text prompts
+-- =====================================================
+
+-- =====================================================
+-- OpenAI Image Models (via Direct API)
+-- =====================================================
+
+INSERT INTO ai_models (
+  provider_type,
+  model_id,
+  model_name,
+  provider_name,
+  capabilities,
+  pricing,
+  performance,
+  context_length,
+  is_available,
+  model_config
+)
+VALUES
+  -- DALL-E 3 (Standard Quality)
+  (
+    'openai',
+    'dall-e-3',
+    'DALL-E 3',
+    'OpenAI Direct',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 40.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0, -- No text context
+    true,
+    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  ),
+
+  -- DALL-E 3 HD (High Quality)
+  (
+    'openai',
+    'dall-e-3-hd',
+    'DALL-E 3 HD',
+    'OpenAI Direct',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 80.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "slow", "intelligence": "very high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "hd", "size": "1024x1024", "style": "vivid"}'::jsonb
+  )
+
+ON CONFLICT (model_id) DO UPDATE SET
+  capabilities = EXCLUDED.capabilities,
+  pricing = EXCLUDED.pricing,
+  model_config = EXCLUDED.model_config;
+
+-- =====================================================
+-- AiTunnel Image Models (DALL-E via Russian intermediary)
+-- =====================================================
+
+INSERT INTO ai_models (
+  provider_type,
+  model_id,
+  model_name,
+  provider_name,
+  capabilities,
+  pricing,
+  performance,
+  context_length,
+  is_available,
+  model_config
+)
+VALUES
+  -- DALL-E 3 via AiTunnel (Ruble pricing)
+  (
+    'aitunnel',
+    'dall-e-3',
+    'DALL-E 3',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 320.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  )
+
+ON CONFLICT (model_id, provider_type) DO UPDATE SET
+  capabilities = EXCLUDED.capabilities,
+  pricing = EXCLUDED.pricing;
+
+-- =====================================================
+-- NeuroAPI Image Models (DALL-E via international intermediary)
+-- =====================================================
+
+INSERT INTO ai_models (
+  provider_type,
+  model_id,
+  model_name,
+  provider_name,
+  capabilities,
+  pricing,
+  performance,
+  context_length,
+  is_available,
+  model_config
+)
+VALUES
+  -- DALL-E 3 via NeuroAPI
+  (
+    'neuroapi',
+    'dall-e-3',
+    'DALL-E 3',
+    'NeuroAPI',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 40.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  )
+
+ON CONFLICT (model_id, provider_type) DO UPDATE SET
+  capabilities = EXCLUDED.capabilities,
+  pricing = EXCLUDED.pricing;
+
+-- =====================================================
+-- Google Gemini Image Models
+-- =====================================================
+
+INSERT INTO ai_models (
+  provider_type,
+  model_id,
+  model_name,
+  provider_name,
+  capabilities,
+  pricing,
+  performance,
+  context_length,
+  is_available,
+  model_config
+)
+VALUES
+  -- Imagen 3 (High-quality image generation)
+  (
+    'gemini',
+    'imagen-3.0-generate-002',
+    'Imagen 3',
+    'Google Gemini',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 20.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"aspect_ratio": "1:1", "number_of_images": 1, "safety_filter_level": "block_some"}'::jsonb
+  ),
+
+  -- Gemini 2.0 Flash Experimental (multimodal with image generation)
+  (
+    'gemini',
+    'gemini-2.0-flash-exp',
+    'Gemini 2.0 Flash (Experimental)',
+    'Google Gemini',
+    '{"text": true, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 0, "currency": "USD", "per_tokens": 1000000}'::jsonb,
+    '{"speed": "very fast", "intelligence": "high"}'::jsonb,
+    1048576,
+    true,
+    '{"temperature": 0.7, "max_tokens": 8192}'::jsonb
+  ),
+
+  -- Gemini 3 Pro Image (Nano Banana Pro) - Premium 4K generation
+  (
+    'gemini',
+    'gemini-3-pro-image-preview',
+    'Gemini 3 Pro Image (Nano Banana Pro)',
+    'Google Gemini',
+    '{"text": false, "image": true, "reasoning": true}'::jsonb,
+    '{"input": 0, "output": 100.00, "currency": "USD", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "slow", "intelligence": "very high"}'::jsonb,
+    0,
+    true,
+    '{"resolution": "4K", "watermark": "synthid", "grounding": true}'::jsonb
+  )
+
+ON CONFLICT (model_id) DO UPDATE SET
+  capabilities = EXCLUDED.capabilities,
+  pricing = EXCLUDED.pricing,
+  model_config = EXCLUDED.model_config;
+
+-- =====================================================
+-- Set default image models for providers
+-- =====================================================
+
+-- OpenAI: DALL-E 3 standard
+UPDATE ai_provider_configs
+SET default_model_id_for_images = (
+  SELECT id FROM ai_models
+  WHERE provider_type = 'openai' AND model_id = 'dall-e-3'
+  LIMIT 1
+)
+WHERE provider_type = 'openai';
+
+-- AiTunnel: DALL-E 3
+UPDATE ai_provider_configs
+SET default_model_id_for_images = (
+  SELECT id FROM ai_models
+  WHERE provider_type = 'aitunnel' AND model_id = 'dall-e-3'
+  LIMIT 1
+)
+WHERE provider_type = 'aitunnel';
+
+-- NeuroAPI: DALL-E 3
+UPDATE ai_provider_configs
+SET default_model_id_for_images = (
+  SELECT id FROM ai_models
+  WHERE provider_type = 'neuroapi' AND model_id = 'dall-e-3'
+  LIMIT 1
+)
+WHERE provider_type = 'neuroapi';
+
+-- Gemini: Imagen 3 (best balance of quality and price)
+UPDATE ai_provider_configs
+SET default_model_id_for_images = (
+  SELECT id FROM ai_models
+  WHERE provider_type = 'gemini' AND model_id = 'imagen-3.0-generate-002'
+  LIMIT 1
+)
+WHERE provider_type = 'gemini';
+
+-- =====================================================
+-- Migration Complete!
+-- =====================================================
+-- Added image generation models:
+-- - OpenAI: dall-e-3, dall-e-3-hd
+-- - AiTunnel: dall-e-3 (RUB pricing)
+-- - NeuroAPI: dall-e-3 (USD pricing)
+-- - Gemini: imagen-3.0-generate-002, gemini-2.0-flash-exp, gemini-3-pro-image-preview
+--
+-- Note: Claude does NOT support image generation natively
+-- =====================================================
