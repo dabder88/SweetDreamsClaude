@@ -228,10 +228,29 @@ export class OpenAIProvider extends BaseProvider {
         throw new Error('No image URL in response');
       }
 
-      this.log(`Image URL received, downloading: ${imageUrl}`);
+      this.log(`Image URL received: ${imageUrl.substring(0, 100)}...`);
 
-      // Download image from URL and convert to base64
-      const base64Image = await this.downloadImageAsBase64(imageUrl);
+      // Check if the URL is already a base64 data URL
+      if (imageUrl.startsWith('data:image/')) {
+        this.log('Image is already in base64 format');
+        return imageUrl;
+      }
+
+      // Download image from HTTP/HTTPS URL and convert to base64
+      this.log('Downloading image from URL...');
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`);
+      }
+
+      const blob = await imageResponse.blob();
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
       this.log('Image downloaded and converted to base64 successfully');
       return base64Image;
     } catch (error: any) {
