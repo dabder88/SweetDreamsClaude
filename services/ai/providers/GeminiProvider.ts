@@ -18,13 +18,22 @@ export class GeminiProvider extends BaseProvider {
   constructor(config: AIProviderConfig, model: AIModel) {
     super(config, model);
 
-    const apiKey = this.getApiKey();
-    if (!apiKey) {
-      throw new Error(`API key not found for ${config.provider_name}. Please set ${config.api_key_env_name} in .env file`);
-    }
+    const apiKey = this.getApiKey() || 'dummy-key-for-init'; // Use dummy key if not found
 
+    // API key validation will happen during actual API calls
     this.ai = new GoogleGenAI({ apiKey });
     this.log(`Initialized with model ${model.model_id}`);
+  }
+
+  /**
+   * Validate API key before making requests
+   * Throws error if key is missing or invalid
+   */
+  private validateApiKey(): void {
+    const apiKey = this.getApiKey();
+    if (!apiKey || apiKey === 'dummy-key-for-init') {
+      throw new Error(`API key not found for ${this.config.provider_name}. Please set ${this.config.api_key_env_name} in .env file`);
+    }
   }
 
   /**
@@ -32,6 +41,9 @@ export class GeminiProvider extends BaseProvider {
    */
   async analyzeDream(dreamData: DreamData): Promise<AnalysisResponse> {
     try {
+      // Validate API key before making any requests
+      this.validateApiKey();
+
       this.log('Starting two-stage dream analysis');
 
       // Stage 1: Get main analysis + symbol names
@@ -186,6 +198,9 @@ export class GeminiProvider extends BaseProvider {
    */
   async generateImage(prompt: string): Promise<string> {
     try {
+      // Validate API key before making any requests
+      this.validateApiKey();
+
       this.log('Starting image generation');
 
       const enhancedPrompt = `Generate a surreal, artistic, and dreamlike digital painting: "${prompt}".

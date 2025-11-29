@@ -19,13 +19,11 @@ export class OpenAIProvider extends BaseProvider {
   constructor(config: AIProviderConfig, model: AIModel) {
     super(config, model);
 
-    const apiKey = this.getApiKey();
-    if (!apiKey) {
-      throw new Error(`API key not found for ${config.provider_name}. Please set ${config.api_key_env_name} in .env file`);
-    }
+    const apiKey = this.getApiKey() || 'dummy-key-for-init'; // Use dummy key if not found
 
     // Initialize OpenAI client with custom baseURL
     // This allows us to use the same client for OpenAI, AiTunnel, and NeuroAPI
+    // API key validation will happen during actual API calls
     this.client = new OpenAI({
       apiKey: apiKey,
       baseURL: config.base_url || 'https://api.openai.com/v1',
@@ -36,11 +34,25 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   /**
+   * Validate API key before making requests
+   * Throws error if key is missing or invalid
+   */
+  private validateApiKey(): void {
+    const apiKey = this.getApiKey();
+    if (!apiKey || apiKey === 'dummy-key-for-init') {
+      throw new Error(`API key not found for ${this.config.provider_name}. Please set ${this.config.api_key_env_name} in .env file`);
+    }
+  }
+
+  /**
    * Analyze dream using OpenAI chat completion
    * Uses two-stage process like Gemini for detailed symbol analysis
    */
   async analyzeDream(dreamData: DreamData): Promise<AnalysisResponse> {
     try {
+      // Validate API key before making any requests
+      this.validateApiKey();
+
       this.log('Starting dream analysis (two-stage process)');
 
       // ===== STAGE 1: Main Analysis + Symbol Names =====
@@ -150,6 +162,9 @@ export class OpenAIProvider extends BaseProvider {
    */
   async generateImage(prompt: string): Promise<string> {
     try {
+      // Validate API key before making any requests
+      this.validateApiKey();
+
       this.log('Starting image generation');
 
       // Check if model supports image generation
