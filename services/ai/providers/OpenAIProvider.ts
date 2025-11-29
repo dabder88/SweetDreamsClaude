@@ -175,9 +175,23 @@ export class OpenAIProvider extends BaseProvider {
       // Get model config for size and quality settings
       const modelConfig = this.model.model_config || {};
       const size = modelConfig.size || '1024x1024';
-      const quality = modelConfig.quality || 'standard';
+      const quality = modelConfig.quality;
 
-      this.log(`Generating image with model: ${this.model.model_id}, size: ${size}, quality: ${quality}`);
+      this.log(`Generating image with model: ${this.model.model_id}, size: ${size}${quality ? `, quality: ${quality}` : ''}`);
+
+      // Build request parameters (only include quality if specified in model config)
+      const baseParams: any = {
+        model: this.model.model_id,
+        prompt: prompt,
+        n: 1,
+        size: size
+      };
+
+      // Only add quality parameter for DALL-E models (OpenAI native)
+      // Other providers (AiTunnel, NeuroAPI) may not support it
+      if (quality && this.model.model_id.includes('dall-e')) {
+        baseParams.quality = quality;
+      }
 
       // All OpenAI-compatible APIs use the same images.generate endpoint
       // Try b64_json first (faster, no CORS issues), fall back to URL if needed
@@ -185,11 +199,7 @@ export class OpenAIProvider extends BaseProvider {
       try {
         this.log('Attempting b64_json format');
         response = await this.client.images.generate({
-          model: this.model.model_id,
-          prompt: prompt,
-          n: 1,
-          size: size as any,
-          quality: quality as any,
+          ...baseParams,
           response_format: 'b64_json'
         });
 
@@ -209,11 +219,7 @@ export class OpenAIProvider extends BaseProvider {
       // Fall back to URL format and download the image
       this.log('Requesting URL format');
       response = await this.client.images.generate({
-        model: this.model.model_id,
-        prompt: prompt,
-        n: 1,
-        size: size as any,
-        quality: quality as any,
+        ...baseParams,
         response_format: 'url'
       });
 
