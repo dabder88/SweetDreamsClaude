@@ -16,12 +16,14 @@ import {
 import {
   getAllProviders,
   getModelsForProvider,
+  getModelsForTask,
   updateProviderConfig,
   setActiveProvider,
+  setActiveProviderForTask,
   testProviderConnection,
   updateModel
 } from '../services/adminService';
-import type { AIProviderConfig, AIModel, AIProviderType } from '../types';
+import type { AIProviderConfig, AIModel, AIProviderType, AITaskType } from '../types';
 
 interface AIProvidersProps {
   onBack: () => void;
@@ -30,8 +32,10 @@ interface AIProvidersProps {
 const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   // State
   const [providers, setProviders] = useState<AIProviderConfig[]>([]);
-  const [activeProvider, setActiveProviderState] = useState<AIProviderConfig | null>(null);
+  const [activeProviderForText, setActiveProviderForText] = useState<AIProviderConfig | null>(null);
+  const [activeProviderForImages, setActiveProviderForImages] = useState<AIProviderConfig | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<AIProviderConfig | null>(null);
+  const [selectedTaskType, setSelectedTaskType] = useState<AITaskType>('text'); // 'text' or 'image'
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -54,8 +58,13 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     try {
       const data = await getAllProviders();
       setProviders(data);
-      const active = data.find(p => p.is_active);
-      setActiveProviderState(active || null);
+
+      // Find active providers for each task type
+      const activeText = data.find(p => p.is_active_for_text);
+      const activeImages = data.find(p => p.is_active_for_images);
+
+      setActiveProviderForText(activeText || null);
+      setActiveProviderForImages(activeImages || null);
     } catch (err) {
       console.error('Failed to load providers:', err);
     } finally {
@@ -64,19 +73,25 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   };
 
   // Open configuration modal
-  const handleConfigureProvider = async (provider: AIProviderConfig) => {
+  const handleConfigureProvider = async (provider: AIProviderConfig, taskType: AITaskType) => {
     setSelectedProvider(provider);
+    setSelectedTaskType(taskType);
     setTestResult(null);
 
     // Initialize provider configuration
     setProviderTemperature(provider.config.temperature || 0.4);
     setProviderMaxTokens(provider.config.max_tokens || 8192);
 
-    // Load available models for this provider
+    // Load available models for this provider filtered by task type
     try {
-      const models = await getModelsForProvider(provider.provider_type);
+      const models = await getModelsForTask(provider.provider_type, taskType);
       setAvailableModels(models);
-      setSelectedModel(provider.default_model_id || '');
+
+      // Set default model based on task type
+      const defaultModelId = taskType === 'text'
+        ? provider.default_model_id_for_text
+        : provider.default_model_id_for_images;
+      setSelectedModel(defaultModelId || models[0]?.id || '');
 
       // Initialize model configurations
       const configs: Record<string, { temperature: number; max_tokens: number }> = {};
@@ -97,15 +112,20 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
 
   // Save configuration and activate provider
   const handleSaveAndActivate = async () => {
-    if (!selectedProvider || !selectedModel) {
+    if (!selectedProvider || !selectedModel || !selectedTaskType) {
       alert('Пожалуйста, выберите модель');
       return;
     }
 
     try {
-      // Update provider configuration (default params + selected model)
+      // Determine which field to update based on task type
+      const defaultModelField = selectedTaskType === 'text'
+        ? 'default_model_id_for_text'
+        : 'default_model_id_for_images';
+
+      // Update provider configuration (default params + selected model for task)
       await updateProviderConfig(selectedProvider.id, {
-        default_model_id: selectedModel,
+        [defaultModelField]: selectedModel,
         config: {
           temperature: providerTemperature,
           max_tokens: providerMaxTokens,
@@ -127,14 +147,16 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
         }
       }
 
-      // Activate provider
-      await setActiveProvider(selectedProvider.id);
+      // Activate provider for this specific task type
+      await setActiveProviderForTask(selectedProvider.id, selectedTaskType);
 
       // Reload providers
       await loadProviders();
 
       setShowConfigModal(false);
-      alert(`Провайдер ${selectedProvider.provider_name} активирован успешно!`);
+
+      const taskLabel = selectedTaskType === 'text' ? 'текстов' : 'изображений';
+      alert(`Провайдер ${selectedProvider.provider_name} активирован для ${taskLabel}!`);
     } catch (err: any) {
       console.error('Failed to save configuration:', err);
       alert(`Ошибка: ${err.message || 'Не удалось сохранить настройки'}`);
@@ -179,9 +201,19 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   };
 
   // Provider card
-  const ProviderCard = ({ provider }: { provider: AIProviderConfig }) => {
+  const ProviderCard = ({
+    provider,
+    taskType,
+    isActive,
+    onConfigure
+  }: {
+    provider: AIProviderConfig;
+    taskType: AITaskType;
+    isActive: boolean;
+    onConfigure: () => void;
+  }) => {
     const getProviderIcon = (type: AIProviderType) => {
-      const iconClass = provider.is_active ? 'text-emerald-400' : 'text-slate-400';
+      const iconClass = isActive ? 'text-emerald-400' : 'text-slate-400';
       switch (type) {
         case 'gemini':
           return <Brain className={iconClass} size={24} />;
@@ -197,33 +229,39 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     };
 
     return (
-      <div className={`bg-slate-800/50 backdrop-blur-sm border ${provider.is_active ? 'border-emerald-500/50' : 'border-slate-700/50'} rounded-xl p-6 transition-all hover:border-emerald-500/30`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 ${provider.is_active ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-slate-700'} rounded-xl flex items-center justify-center shadow-lg`}>
+      <div className={`bg-slate-800/50 backdrop-blur-sm border ${isActive ? 'border-emerald-500/50' : 'border-slate-700/50'} rounded-xl p-4 transition-all hover:border-emerald-500/30`}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-10 h-10 ${isActive ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-slate-700'} rounded-lg flex items-center justify-center shadow-lg`}>
               {getProviderIcon(provider.provider_type)}
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{provider.provider_name}</h3>
-              <p className="text-sm text-slate-400 capitalize">{provider.provider_type}</p>
+              <h3 className="text-base font-semibold text-white">{provider.provider_name}</h3>
+              <p className="text-xs text-slate-400 capitalize">{provider.provider_type}</p>
             </div>
           </div>
-          <ProviderStatusBadge provider={provider} />
+          {isActive && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-600/20 text-emerald-400 rounded text-xs font-medium">
+              <CheckCircle size={12} />
+              Активен
+            </span>
+          )}
         </div>
 
         {provider.base_url && (
-          <div className="mb-4 p-3 bg-slate-900/50 rounded-lg">
-            <p className="text-xs text-slate-500 mb-1">Base URL</p>
-            <p className="text-sm text-slate-300 font-mono truncate">{provider.base_url}</p>
+          <div className="mb-3 p-2 bg-slate-900/50 rounded">
+            <p className="text-xs text-slate-500 mb-0.5">Base URL</p>
+            <p className="text-xs text-slate-300 font-mono truncate">{provider.base_url}</p>
           </div>
         )}
 
         <button
-          onClick={() => handleConfigureProvider(provider)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+          type="button"
+          onClick={onConfigure}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm"
         >
-          <Settings size={16} />
-          Настроить {provider.is_active ? '' : '/ Активировать'}
+          <Settings size={14} />
+          {isActive ? 'Настроить' : 'Настроить / Активировать'}
         </button>
       </div>
     );
@@ -313,24 +351,73 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
           <p className="text-slate-400">Загрузка провайдеров...</p>
         </div>
       ) : (
-        <>
-          {/* Active provider info */}
-          {activeProvider && (
-            <div className="mb-6 p-4 bg-emerald-600/10 border border-emerald-500/30 rounded-xl">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <CheckCircle size={20} />
-                <span className="font-semibold">Активный провайдер: {activeProvider.provider_name}</span>
+        <div className="space-y-8">
+          {/* ===== БЛОК 1: ИИ ДЛЯ ТЕКСТОВ ===== */}
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                  <Brain className="text-white" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">ИИ для текстов</h2>
+                  <p className="text-sm text-slate-400">Анализ снов, отчёты</p>
+                </div>
               </div>
+              {activeProviderForText && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
+                  <CheckCircle size={16} />
+                  <span className="text-sm font-medium">{activeProviderForText.provider_name}</span>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Provider grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {providers.map(provider => (
-              <ProviderCard key={provider.id} provider={provider} />
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {providers.map(provider => (
+                <ProviderCard
+                  key={`text-${provider.id}`}
+                  provider={provider}
+                  taskType="text"
+                  isActive={activeProviderForText?.id === provider.id}
+                  onConfigure={() => handleConfigureProvider(provider, 'text')}
+                />
+              ))}
+            </div>
           </div>
-        </>
+
+          {/* ===== БЛОК 2: ИИ ДЛЯ ИЗОБРАЖЕНИЙ ===== */}
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                  <Zap className="text-white" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">ИИ для изображений</h2>
+                  <p className="text-sm text-slate-400">Визуализация снов, аватары</p>
+                </div>
+              </div>
+              {activeProviderForImages && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg">
+                  <CheckCircle size={16} />
+                  <span className="text-sm font-medium">{activeProviderForImages.provider_name}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {providers.map(provider => (
+                <ProviderCard
+                  key={`image-${provider.id}`}
+                  provider={provider}
+                  taskType="image"
+                  isActive={activeProviderForImages?.id === provider.id}
+                  onConfigure={() => handleConfigureProvider(provider, 'image')}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Configuration Modal */}
@@ -342,9 +429,16 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
               <h2 className="text-2xl font-bold text-white mb-2">
                 Настройка {selectedProvider.provider_name}
               </h2>
-              <p className="text-slate-400 text-sm">
-                Выберите модель AI и настройте параметры
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-slate-400 text-sm">
+                  {selectedTaskType === 'text' ? 'Для текстов (анализ снов, отчёты)' : 'Для изображений (визуализация, аватары)'}
+                </p>
+                {selectedTaskType === 'text' ? (
+                  <Brain size={16} className="text-blue-400" />
+                ) : (
+                  <Zap size={16} className="text-purple-400" />
+                )}
+              </div>
             </div>
 
             {/* Modal Body */}
