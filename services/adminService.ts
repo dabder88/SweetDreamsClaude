@@ -1504,11 +1504,14 @@ export const getAllProviders = async (): Promise<AIProviderConfig[]> => {
       .select('*')
       .order('provider_name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching provider configs from Supabase:', error);
+      return []; // Return empty array instead of throwing
+    }
     return data || [];
   } catch (err) {
     console.error('Error in getAllProviders:', err);
-    throw err;
+    return []; // Return empty array instead of throwing
   }
 };
 
@@ -1814,10 +1817,13 @@ export const getModelsForTask = async (
       .eq(capabilityField, true) // Filter by capability
       .order('pricing->input', { ascending: true }); // Sort by price (cheapest first)
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Error fetching models from Supabase for ${providerType}/${taskType}:`, error);
+      return []; // Return empty array instead of throwing
+    }
     return data || [];
   } catch (err) {
     console.error(`Error in getModelsForTask(${providerType}, ${taskType}):`, err);
-    throw err;
+    return []; // Return empty array instead of throwing
   }
 };
