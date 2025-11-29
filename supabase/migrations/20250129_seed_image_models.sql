@@ -82,32 +82,46 @@ INSERT INTO ai_models (
   model_config
 )
 VALUES
-  -- DALL-E 3 via AiTunnel (Ruble pricing)
-  (
-    'aitunnel',
-    'dall-e-3',
-    'DALL-E 3',
-    'AiTunnel',
-    '{"text": false, "image": true, "reasoning": false}'::jsonb,
-    '{"input": 0, "output": 320.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
-    '{"speed": "medium", "intelligence": "high"}'::jsonb,
-    0,
-    true,
-    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
-  ),
-
-  -- GPT Image 1 via AiTunnel
+  -- GPT Image 1 via AiTunnel (medium quality - best balance)
   (
     'aitunnel',
     'gpt-image-1',
     'GPT Image 1',
     'AiTunnel',
     '{"text": false, "image": true, "reasoning": false}'::jsonb,
-    '{"input": 0, "output": 320.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"input": 0, "output": 11.82, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
     '{"speed": "slow", "intelligence": "high"}'::jsonb,
     0,
     true,
-    '{"quality": "high", "size": "1024x1024"}'::jsonb
+    '{"quality": "medium", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- DALL-E 3 via AiTunnel (standard quality)
+  (
+    'aitunnel',
+    'dall-e-3',
+    'DALL-E 3',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 10.80, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024", "style": "vivid"}'::jsonb
+  ),
+
+  -- DALL-E 2 via AiTunnel (standard quality)
+  (
+    'aitunnel',
+    'dall-e-2',
+    'DALL-E 2',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 3.24, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "fast", "intelligence": "medium"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024"}'::jsonb
   ),
 
   -- Qwen Image Edit via AiTunnel
@@ -117,25 +131,25 @@ VALUES
     'Qwen Image Edit',
     'AiTunnel',
     '{"text": false, "image": true, "reasoning": false}'::jsonb,
-    '{"input": 0, "output": 200.00, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"input": 0, "output": 8.10, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
     '{"speed": "medium", "intelligence": "medium"}'::jsonb,
     0,
     true,
     '{"quality": "standard", "size": "1024x1024"}'::jsonb
   ),
 
-  -- Gemini 2.5 Flash Image via AiTunnel
+  -- SeeDream 4.0 via AiTunnel
   (
     'aitunnel',
-    'gemini-2.5-flash-image',
-    'Gemini 2.5 Flash Image',
+    'seedream-4-0-250828',
+    'SeeDream 4.0',
     'AiTunnel',
     '{"text": false, "image": true, "reasoning": false}'::jsonb,
-    '{"input": 54, "output": 450, "currency": "RUB", "per_tokens": 1000000, "per_image": 0}'::jsonb,
-    '{"speed": "very fast", "intelligence": "high"}'::jsonb,
+    '{"input": 0, "output": 5.40, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
     0,
     true,
-    '{"quality": "standard", "size": "1024x1024"}'::jsonb
+    '{"quality": "standard", "size": "any"}'::jsonb
   ),
 
   -- Gemini 3 Pro Image Preview via AiTunnel
@@ -145,11 +159,53 @@ VALUES
     'Gemini 3 Pro Image Preview',
     'AiTunnel',
     '{"text": false, "image": true, "reasoning": true}'::jsonb,
-    '{"input": 360, "output": 2160, "currency": "RUB", "per_tokens": 1000000, "per_image": 0}'::jsonb,
+    '{"input": 0, "output": 22.50, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
     '{"speed": "fast", "intelligence": "very high"}'::jsonb,
     0,
     true,
     '{"quality": "high", "resolution": "4K"}'::jsonb
+  ),
+
+  -- Gemini 2.5 Flash Image via AiTunnel (cheapest!)
+  (
+    'aitunnel',
+    'gemini-2.5-flash-image',
+    'Gemini 2.5 Flash Image',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 7.20, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "very fast", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "standard", "size": "1024x1024"}'::jsonb
+  ),
+
+  -- Flux.2 Pro via AiTunnel
+  (
+    'aitunnel',
+    'flux.2-pro',
+    'Flux.2 Pro',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 5.40, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "medium", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "size": "any"}'::jsonb
+  ),
+
+  -- Flux.2 Flex via AiTunnel
+  (
+    'aitunnel',
+    'flux.2-flex',
+    'Flux.2 Flex',
+    'AiTunnel',
+    '{"text": false, "image": true, "reasoning": false}'::jsonb,
+    '{"input": 0, "output": 10.80, "currency": "RUB", "per_tokens": 0, "per_image": 1}'::jsonb,
+    '{"speed": "fast", "intelligence": "high"}'::jsonb,
+    0,
+    true,
+    '{"quality": "high", "size": "any"}'::jsonb
   )
 
 ON CONFLICT (provider_type, model_id) DO UPDATE SET
@@ -344,7 +400,8 @@ WHERE provider_type = 'gemini';
 -- =====================================================
 -- Added image generation models:
 -- - OpenAI: dall-e-3, dall-e-3-hd
--- - AiTunnel: dall-e-3, gpt-image-1, qwen-image-edit, gemini-2.5-flash-image, gemini-3-pro-image-preview (RUB pricing)
+-- - AiTunnel: gpt-image-1, dall-e-3, dall-e-2, qwen-image-edit, seedream-4-0-250828,
+--             gemini-3-pro-image-preview, gemini-2.5-flash-image, flux.2-pro, flux.2-flex (RUB pricing)
 -- - NeuroAPI: dall-e-3, gpt-image-1, gemini-2.5-flash-image, gemini-3-pro-image-preview
 -- - Gemini: imagen-3.0-generate-002, gemini-2.0-flash-exp, gemini-3-pro-image-preview
 --
