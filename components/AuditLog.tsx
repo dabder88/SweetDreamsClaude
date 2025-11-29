@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Filter, Calendar, User, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Filter, Calendar, User, Shield, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import type { AuditLogEntry, AdminActionType } from '../types';
 import { getAuditLogs, type LogFilters } from '../services/adminService';
 
@@ -10,6 +10,7 @@ interface AuditLogProps {
 const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 20;
@@ -26,8 +27,12 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
     loadLogs();
   }, [currentPage, selectedActionType, dateFrom, dateTo]);
 
-  const loadLogs = async () => {
-    setLoading(true);
+  const loadLogs = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const filters: LogFilters = {
         actionType: selectedActionType || undefined,
@@ -46,6 +51,7 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
       console.error('Error loading audit logs:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -135,7 +141,7 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
           Назад к обзору
         </button>
 
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-2 flex-1">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
             <Shield className="text-white" size={24} />
           </div>
@@ -144,6 +150,15 @@ const AuditLog: React.FC<AuditLogProps> = ({ onBack }) => {
             <p className="text-slate-400 text-sm">История административных действий</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => loadLogs(true)}
+          disabled={refreshing}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+        >
+          <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? 'Обновление...' : 'Обновить данные'}
+        </button>
       </div>
 
       {/* Search and Filters */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, TrendingUp, PieChart, CheckCircle, Clock, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, TrendingUp, PieChart, CheckCircle, Clock, Calendar, FileText, RefreshCw } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -40,14 +40,19 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onBack }) => {
   // Состояния для UI
   const [period, setPeriod] = useState<AnalyticsPeriod>('month');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Загрузка данных
   useEffect(() => {
     loadAllData();
   }, [period]);
 
-  const loadAllData = async () => {
-    setLoading(true);
+  const loadAllData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [activity, methods, api, dreamLength, timeOfDay, dayOfWeek] = await Promise.all([
         getActivityByPeriod(period),
@@ -68,6 +73,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onBack }) => {
       console.error('Error loading analytics:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -79,6 +85,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onBack }) => {
       {/* Header */}
       <div className="mb-8">
         <button
+          type="button"
           onClick={onBack}
           className="flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors"
         >
@@ -90,10 +97,19 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onBack }) => {
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
             <TrendingUp className="text-white" size={24} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-serif font-bold text-white">Аналитика</h1>
             <p className="text-slate-400 text-sm">Подробная статистика использования системы</p>
           </div>
+          <button
+            type="button"
+            onClick={() => loadAllData(true)}
+            disabled={refreshing}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Обновление...' : 'Обновить данные'}
+          </button>
         </div>
 
         {/* Period Selector */}
@@ -101,6 +117,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onBack }) => {
           {(['day', 'week', 'month', 'year', 'all'] as AnalyticsPeriod[]).map(p => (
             <button
               key={p}
+              type="button"
               onClick={() => setPeriod(p)}
               className={`px-4 py-2 rounded-lg transition-colors ${period === p
                   ? 'bg-emerald-600 text-white'

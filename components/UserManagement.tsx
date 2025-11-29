@@ -18,7 +18,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  BookOpen
+  BookOpen,
+  RefreshCw
 } from 'lucide-react';
 import { getAllUsers, getUserBalance, type UserFilters } from '../services/adminService';
 import { supabase } from '../services/supabaseClient';
@@ -41,6 +42,7 @@ type SortDirection = 'asc' | 'desc' | null;
 const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) => {
   const [users, setUsers] = useState<UserWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,9 +73,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
     loadUsers();
   }, [filters, currentPage]);
 
-  const loadUsers = async () => {
+  const loadUsers = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
       const offset = (currentPage - 1) * usersPerPage;
@@ -122,6 +128,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
       setError('Не удалось загрузить список пользователей');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -308,6 +315,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ onViewUser, onBack }) =
             <p className="text-slate-400">Всего пользователей: {users.length}</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => loadUsers(true)}
+          disabled={refreshing}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+        >
+          <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? 'Обновление...' : 'Обновить данные'}
+        </button>
       </div>
 
       {/* Search and Filters */}

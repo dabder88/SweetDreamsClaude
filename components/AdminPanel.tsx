@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText, Cpu } from 'lucide-react';
+import { Shield, Users, Activity, DollarSign, Settings as SettingsIcon, FileText, Cpu, RefreshCw } from 'lucide-react';
 import UserManagement from './UserManagement';
 import UserDetail from './UserDetail';
 import AuditLog from './AuditLog';
@@ -43,34 +43,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
   const [monthlyRevenue, setMonthlyRevenue] = useState<number>(0);
   const [totalEntries, setTotalEntries] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Load statistics on component mount
   useEffect(() => {
-    const loadStats = async () => {
-      setLoading(true);
-      try {
-        const [systemStats, todayCount, revenue, entries] = await Promise.all([
-          getSystemStats(),
-          getTodayAnalysesCount(),
-          getMonthlyRevenue(),
-          getTotalDreamEntries()
-        ]);
-
-        setTotalUsers(systemStats.totalUsers);
-        setTodayAnalyses(todayCount);
-        setMonthlyRevenue(revenue);
-        setTotalEntries(entries);
-      } catch (err) {
-        console.error('Error loading admin stats:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (currentView === 'overview') {
       loadStats();
     }
   }, [currentView]);
+
+  const loadStats = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const [systemStats, todayCount, revenue, entries] = await Promise.all([
+        getSystemStats(),
+        getTodayAnalysesCount(),
+        getMonthlyRevenue(),
+        getTotalDreamEntries()
+      ]);
+
+      setTotalUsers(systemStats.totalUsers);
+      setTodayAnalyses(todayCount);
+      setMonthlyRevenue(revenue);
+      setTotalEntries(entries);
+    } catch (err) {
+      console.error('Error loading admin stats:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const handleViewUser = (user: UserWithBalance) => {
     setSelectedUser(user);
@@ -152,10 +158,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate, currentView: propVi
           <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
             <Shield className="text-white" size={24} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-serif font-bold text-white">Панель администратора</h1>
             <p className="text-slate-400 text-sm">Управление системой PsyDream</p>
           </div>
+          <button
+            type="button"
+            onClick={() => loadStats(true)}
+            disabled={refreshing}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Обновление...' : 'Обновить данные'}
+          </button>
         </div>
       </div>
 

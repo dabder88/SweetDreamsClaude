@@ -14,7 +14,8 @@ import {
   Loader,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  RefreshCw
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -42,6 +43,7 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -59,8 +61,12 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
     loadProviders();
   }, []);
 
-  const loadProviders = async () => {
-    setLoading(true);
+  const loadProviders = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const data = await getAllProviders();
       setProviders(data);
@@ -75,6 +81,7 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
       console.error('Failed to load providers:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -332,6 +339,7 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
       {/* Header */}
       <div className="mb-8">
         <button
+          type="button"
           onClick={onBack}
           className="flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors"
         >
@@ -343,10 +351,19 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
             <Cpu className="text-white" size={24} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-serif font-bold text-white">AI Провайдеры</h1>
             <p className="text-slate-400 text-sm">Управление AI провайдерами и моделями</p>
           </div>
+          <button
+            type="button"
+            onClick={() => loadProviders(true)}
+            disabled={refreshing}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Обновление...' : 'Обновить данные'}
+          </button>
         </div>
       </div>
 
