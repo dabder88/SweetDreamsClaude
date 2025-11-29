@@ -46,23 +46,23 @@ VALUES
    '{"intelligence": "medium", "speed": "fastest"}'::jsonb,
    128000, true),
 
-  -- 2. GPT-5 Mini - Optimal balance
+  -- 2. GPT-5 Mini - Optimal balance (multimodal: can analyze images but NOT generate them)
   ('aitunnel', 'gpt-5-mini', 'GPT-5 Mini', 'AiTunnel',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 4.5, "output": 360, "currency": "RUB", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "high", "speed": "fast"}'::jsonb,
    128000, true),
 
-  -- 3. GPT-5 - Premium quality
+  -- 3. GPT-5 - Premium quality (multimodal: can analyze images but NOT generate them)
   ('aitunnel', 'gpt-5', 'GPT-5', 'AiTunnel',
-   '{"text": true, "image": true, "reasoning": true}'::jsonb,
+   '{"text": true, "image": false, "reasoning": true}'::jsonb,
    '{"input": 22.5, "output": 1800, "currency": "RUB", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "medium"}'::jsonb,
    128000, true),
 
-  -- 4. Claude Sonnet 4.5 - Best quality
+  -- 4. Claude Sonnet 4.5 - Best quality (multimodal: can analyze images but NOT generate them)
   ('aitunnel', 'claude-sonnet-4.5', 'Claude Sonnet 4.5', 'AiTunnel',
-   '{"text": true, "image": true, "reasoning": true}'::jsonb,
+   '{"text": true, "image": false, "reasoning": true}'::jsonb,
    '{"input": 540, "output": 2700, "currency": "RUB", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "highest", "speed": "medium"}'::jsonb,
    200000, true),
@@ -74,16 +74,16 @@ VALUES
    '{"intelligence": "highest", "speed": "slow"}'::jsonb,
    64000, true),
 
-  -- 6. Gemini 2.5 Flash - Fast and cheap
+  -- 6. Gemini 2.5 Flash - Fast and cheap (multimodal: can analyze images but NOT generate them)
   ('aitunnel', 'gemini-2.5-flash', 'Gemini 2.5 Flash', 'AiTunnel',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 5.4, "output": 180, "currency": "RUB", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "high", "speed": "fastest"}'::jsonb,
    1000000, true),
 
-  -- 7. GPT-4o Mini - Classic reliable
+  -- 7. GPT-4o Mini - Classic reliable (multimodal: can analyze images but NOT generate them)
   ('aitunnel', 'gpt-4o-mini', 'GPT-4o Mini', 'AiTunnel',
-   '{"text": true, "image": true, "reasoning": false}'::jsonb,
+   '{"text": true, "image": false, "reasoning": false}'::jsonb,
    '{"input": 9, "output": 180, "currency": "RUB", "per": "1M tokens"}'::jsonb,
    '{"intelligence": "high", "speed": "fast"}'::jsonb,
    128000, true),
