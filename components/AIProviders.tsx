@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   Cpu,
@@ -15,7 +15,10 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  RefreshCw
+  RefreshCw,
+  ArrowUpDown,
+  Filter,
+  XCircle as FilterX
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -53,6 +56,24 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   const [showImageProviders, setShowImageProviders] = useState(false);
   const [selectedModelForConfig, setSelectedModelForConfig] = useState<string | null>(null);
 
+  // Sorting state
+  type SortOption = 'none' | 'price_input_asc' | 'price_input_desc' | 'price_output_asc' | 'price_output_desc' | 'intelligence' | 'speed' | 'context' | 'alphabetical';
+  const [sortBy, setSortBy] = useState<SortOption>('none');
+
+  // Filtering state
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterPriceInputMin, setFilterPriceInputMin] = useState<string>('');
+  const [filterPriceInputMax, setFilterPriceInputMax] = useState<string>('');
+  const [filterPriceOutputMin, setFilterPriceOutputMin] = useState<string>('');
+  const [filterPriceOutputMax, setFilterPriceOutputMax] = useState<string>('');
+  const [filterCurrency, setFilterCurrency] = useState<'ALL' | 'RUB' | 'USD'>('ALL');
+  const [filterIntelligence, setFilterIntelligence] = useState<string[]>([]);
+  const [filterReasoning, setFilterReasoning] = useState<'all' | 'yes' | 'no'>('all');
+  const [filterSpeed, setFilterSpeed] = useState<string[]>([]);
+  const [filterContextMin, setFilterContextMin] = useState<string>('');
+  const [filterContextMax, setFilterContextMax] = useState<string>('');
+  const [filterProviders, setFilterProviders] = useState<string[]>([]);
+
   // Configuration state
   const [providerTemperature, setProviderTemperature] = useState<number>(0.4);
   const [providerMaxTokens, setProviderMaxTokens] = useState<number>(8192);
@@ -62,6 +83,154 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
   useEffect(() => {
     loadProviders();
   }, []);
+
+  // Filtered and sorted models with useMemo for performance
+  const sortedModels = useMemo(() => {
+    // Step 1: Apply filters
+    let filtered = [...availableModels];
+
+    // Filter by price input
+    if (filterPriceInputMin !== '' || filterPriceInputMax !== '') {
+      filtered = filtered.filter(model => {
+        if (filterCurrency !== 'ALL' && model.pricing.currency !== filterCurrency) return false;
+
+        const min = filterPriceInputMin !== '' ? parseFloat(filterPriceInputMin) : -Infinity;
+        const max = filterPriceInputMax !== '' ? parseFloat(filterPriceInputMax) : Infinity;
+        return model.pricing.input >= min && model.pricing.input <= max;
+      });
+    }
+
+    // Filter by price output
+    if (filterPriceOutputMin !== '' || filterPriceOutputMax !== '') {
+      filtered = filtered.filter(model => {
+        if (filterCurrency !== 'ALL' && model.pricing.currency !== filterCurrency) return false;
+
+        const min = filterPriceOutputMin !== '' ? parseFloat(filterPriceOutputMin) : -Infinity;
+        const max = filterPriceOutputMax !== '' ? parseFloat(filterPriceOutputMax) : Infinity;
+        return model.pricing.output >= min && model.pricing.output <= max;
+      });
+    }
+
+    // Filter by currency (if only currency is selected without price ranges)
+    if (filterCurrency !== 'ALL' && filterPriceInputMin === '' && filterPriceInputMax === '' && filterPriceOutputMin === '' && filterPriceOutputMax === '') {
+      filtered = filtered.filter(model => model.pricing.currency === filterCurrency);
+    }
+
+    // Filter by intelligence
+    if (filterIntelligence.length > 0) {
+      filtered = filtered.filter(model => filterIntelligence.includes(model.performance.intelligence));
+    }
+
+    // Filter by reasoning capability
+    if (filterReasoning !== 'all') {
+      const hasReasoning = filterReasoning === 'yes';
+      filtered = filtered.filter(model => model.capabilities.reasoning === hasReasoning);
+    }
+
+    // Filter by speed
+    if (filterSpeed.length > 0) {
+      filtered = filtered.filter(model => filterSpeed.includes(model.performance.speed));
+    }
+
+    // Filter by context length
+    if (filterContextMin !== '' || filterContextMax !== '') {
+      filtered = filtered.filter(model => {
+        const min = filterContextMin !== '' ? parseInt(filterContextMin) : -Infinity;
+        const max = filterContextMax !== '' ? parseInt(filterContextMax) : Infinity;
+        return model.context_length >= min && model.context_length <= max;
+      });
+    }
+
+    // Filter by provider name
+    if (filterProviders.length > 0) {
+      filtered = filtered.filter(model => filterProviders.includes(model.provider_name || ''));
+    }
+
+    // Step 2: Apply sorting
+    if (sortBy === 'none') return filtered;
+
+    const sorted = [...filtered];
+
+    switch (sortBy) {
+      case 'price_input_asc':
+        return sorted.sort((a, b) => a.pricing.input - b.pricing.input);
+      case 'price_input_desc':
+        return sorted.sort((a, b) => b.pricing.input - a.pricing.input);
+      case 'price_output_asc':
+        return sorted.sort((a, b) => a.pricing.output - b.pricing.output);
+      case 'price_output_desc':
+        return sorted.sort((a, b) => b.pricing.output - a.pricing.output);
+      case 'intelligence': {
+        const intelligenceOrder = { highest: 0, high: 1, medium: 2, low: 3 };
+        return sorted.sort((a, b) => {
+          const aLevel = intelligenceOrder[a.performance.intelligence as keyof typeof intelligenceOrder] ?? 999;
+          const bLevel = intelligenceOrder[b.performance.intelligence as keyof typeof intelligenceOrder] ?? 999;
+          return aLevel - bLevel;
+        });
+      }
+      case 'speed': {
+        const speedOrder = { fastest: 0, fast: 1, medium: 2, slow: 3 };
+        return sorted.sort((a, b) => {
+          const aLevel = speedOrder[a.performance.speed as keyof typeof speedOrder] ?? 999;
+          const bLevel = speedOrder[b.performance.speed as keyof typeof speedOrder] ?? 999;
+          return aLevel - bLevel;
+        });
+      }
+      case 'context':
+        return sorted.sort((a, b) => b.context_length - a.context_length);
+      case 'alphabetical':
+        return sorted.sort((a, b) => a.model_name.localeCompare(b.model_name, 'ru'));
+      default:
+        return sorted;
+    }
+  }, [
+    availableModels,
+    sortBy,
+    filterPriceInputMin,
+    filterPriceInputMax,
+    filterPriceOutputMin,
+    filterPriceOutputMax,
+    filterCurrency,
+    filterIntelligence,
+    filterReasoning,
+    filterSpeed,
+    filterContextMin,
+    filterContextMax,
+    filterProviders
+  ]);
+
+  // Get unique provider names from available models
+  const uniqueProviderNames = useMemo(() => {
+    const names = new Set<string>();
+    availableModels.forEach(model => {
+      if (model.provider_name) names.add(model.provider_name);
+    });
+    return Array.from(names).sort();
+  }, [availableModels]);
+
+  // Reset all filters
+  const resetFilters = () => {
+    setFilterPriceInputMin('');
+    setFilterPriceInputMax('');
+    setFilterPriceOutputMin('');
+    setFilterPriceOutputMax('');
+    setFilterCurrency('ALL');
+    setFilterIntelligence([]);
+    setFilterReasoning('all');
+    setFilterSpeed([]);
+    setFilterContextMin('');
+    setFilterContextMax('');
+    setFilterProviders([]);
+  };
+
+  // Toggle checkbox array (for multi-select filters)
+  const toggleArrayFilter = (arr: string[], value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (arr.includes(value)) {
+      setter(arr.filter(v => v !== value));
+    } else {
+      setter([...arr, value]);
+    }
+  };
 
   const loadProviders = async (isRefresh = false) => {
     if (isRefresh) {
@@ -527,7 +696,233 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
             <div className="p-6">
               {/* Model Selection */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Выберите модель</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Выберите модель</h3>
+
+                  {/* Filter and Sort Controls */}
+                  {!loadingModels && availableModels.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {/* Filter Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          showFilters
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        <Filter size={16} />
+                        Фильтры
+                      </button>
+
+                      {/* Sort Controls */}
+                      <ArrowUpDown size={16} className="text-slate-400" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                        aria-label="Сортировка моделей"
+                        className="px-3 py-1.5 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="none">Без сортировки</option>
+                        <option value="price_input_asc">Цена Input ↑</option>
+                        <option value="price_input_desc">Цена Input ↓</option>
+                        <option value="price_output_asc">Цена Output ↑</option>
+                        <option value="price_output_desc">Цена Output ↓</option>
+                        <option value="intelligence">Уровень мышления</option>
+                        <option value="speed">Скорость</option>
+                        <option value="context">Контекстное окно</option>
+                        <option value="alphabetical">Алфавитный порядок</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Filters Panel */}
+                {showFilters && !loadingModels && availableModels.length > 0 && (
+                  <div className="mb-4 p-4 bg-slate-900/50 border border-slate-700 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-white">Фильтры</h4>
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        <FilterX size={14} />
+                        Сбросить всё
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Price Input Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Цена Input</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            placeholder="От"
+                            value={filterPriceInputMin}
+                            onChange={(e) => setFilterPriceInputMin(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <span className="text-slate-500">—</span>
+                          <input
+                            type="number"
+                            placeholder="До"
+                            value={filterPriceInputMax}
+                            onChange={(e) => setFilterPriceInputMax(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Price Output Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Цена Output</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            placeholder="От"
+                            value={filterPriceOutputMin}
+                            onChange={(e) => setFilterPriceOutputMin(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <span className="text-slate-500">—</span>
+                          <input
+                            type="number"
+                            placeholder="До"
+                            value={filterPriceOutputMax}
+                            onChange={(e) => setFilterPriceOutputMax(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Currency Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Валюта</label>
+                        <select
+                          value={filterCurrency}
+                          onChange={(e) => setFilterCurrency(e.target.value as 'ALL' | 'RUB' | 'USD')}
+                          aria-label="Фильтр по валюте"
+                          className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        >
+                          <option value="ALL">Все валюты</option>
+                          <option value="RUB">Рубли (RUB)</option>
+                          <option value="USD">Доллары (USD)</option>
+                        </select>
+                      </div>
+
+                      {/* Context Length Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Контекст (токены)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            placeholder="От"
+                            value={filterContextMin}
+                            onChange={(e) => setFilterContextMin(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <span className="text-slate-500">—</span>
+                          <input
+                            type="number"
+                            placeholder="До"
+                            value={filterContextMax}
+                            onChange={(e) => setFilterContextMax(e.target.value)}
+                            className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Intelligence Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Уровень мышления</label>
+                        <div className="flex flex-wrap gap-2">
+                          {['highest', 'high', 'medium', 'low'].map(level => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => toggleArrayFilter(filterIntelligence, level, setFilterIntelligence)}
+                              className={`px-2 py-1 text-xs rounded transition-colors ${
+                                filterIntelligence.includes(level)
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {level === 'highest' ? 'Наивысший' : level === 'high' ? 'Высокий' : level === 'medium' ? 'Средний' : 'Низкий'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Speed Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Скорость</label>
+                        <div className="flex flex-wrap gap-2">
+                          {['fastest', 'fast', 'medium', 'slow'].map(speed => (
+                            <button
+                              key={speed}
+                              type="button"
+                              onClick={() => toggleArrayFilter(filterSpeed, speed, setFilterSpeed)}
+                              className={`px-2 py-1 text-xs rounded transition-colors ${
+                                filterSpeed.includes(speed)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {speed === 'fastest' ? 'Самая быстрая' : speed === 'fast' ? 'Быстрая' : speed === 'medium' ? 'Средняя' : 'Медленная'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Reasoning Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Режим рассуждений</label>
+                        <select
+                          value={filterReasoning}
+                          onChange={(e) => setFilterReasoning(e.target.value as 'all' | 'yes' | 'no')}
+                          aria-label="Фильтр по режиму рассуждений"
+                          className="w-full px-2 py-1 bg-slate-800 text-white border border-slate-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        >
+                          <option value="all">Все модели</option>
+                          <option value="yes">Думающие</option>
+                          <option value="no">Обычные</option>
+                        </select>
+                      </div>
+
+                      {/* Provider Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-2">Оператор</label>
+                        <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
+                          {uniqueProviderNames.map(providerName => (
+                            <button
+                              key={providerName}
+                              type="button"
+                              onClick={() => toggleArrayFilter(filterProviders, providerName, setFilterProviders)}
+                              className={`px-2 py-1 text-xs rounded transition-colors ${
+                                filterProviders.includes(providerName)
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {providerName}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Filters Count */}
+                    <div className="mt-3 pt-3 border-t border-slate-700">
+                      <p className="text-xs text-slate-400">
+                        Найдено моделей: <span className="text-emerald-400 font-semibold">{sortedModels.length}</span> из {availableModels.length}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {loadingModels ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
@@ -537,7 +932,7 @@ const AIProviders: React.FC<AIProvidersProps> = ({ onBack }) => {
                   <p className="text-slate-400 text-center py-8">Нет доступных моделей для этого провайдера</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
-                    {availableModels.map(model => {
+                    {sortedModels.map(model => {
                       const handleSelectModel = () => setSelectedModel(model.id);
                       return (
                         <ModelCard
