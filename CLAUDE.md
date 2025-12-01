@@ -1,268 +1,433 @@
 # ЯЗЫК ОБЩЕНИЯ
 
-Всегда отвечай ТООЛКО НА РУССКОМ ЯЗЫКЕ
+Всегда отвечай ТОЛЬКО НА РУССКОМ ЯЗЫКЕ
 
-# CLAUDE.md
+---
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# CLAUDE.md - Главная документация PsyDream
 
-## Project Overview
+**PsyDream** - это React + TypeScript веб-приложение для психологического анализа снов с использованием универсальной системы AI провайдеров (Gemini, OpenAI, Claude, AiTunnel, NeuroAPI и др.). Приложение позволяет пользователям описывать сны, предоставлять контекст, выбирать метод психологического анализа (Юнгианский, Фрейдистский, Гештальт, Когнитивный, Экзистенциальный или Авто), и получать AI-интерпретации с анализом символизма и визуализацией.
 
-**PsyDream** is a React + TypeScript web application for psychological dream analysis using Google's Gemini AI. The app allows users to describe their dreams, provide context, select a psychological analysis method (Jungian, Freudian, Gestalt, Cognitive, Existential, or Auto), and receive AI-generated interpretations with symbolism analysis and visualization.
+---
 
-## Development Commands
+## ⚠️ КРИТИЧЕСКИ ВАЖНО: Обновление документации
 
-### Local Development
+**После ЛЮБЫХ значимых изменений в проекте ты ОБЯЗАН обновить соответствующую документацию!**
+
+### Что считается "значимыми изменениями"
+
+| Изменение | Какие файлы обновить |
+|-----------|----------------------|
+| Добавление/удаление views, routes | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), этот файл |
+| Изменения в схеме БД, таблицах, RLS политиках | [docs/DATABASE.md](docs/DATABASE.md), этот файл |
+| Добавление/удаление AI провайдеров или моделей | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md), этот файл |
+| Изменения в wizard flow (шаги анализа снов) | [docs/DREAM_ANALYSIS.md](docs/DREAM_ANALYSIS.md), этот файл |
+| Изменения в системе аутентификации, ролях | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md), этот файл |
+| Изменения в Admin Panel функциях | [docs/ADMIN_PANEL.md](docs/ADMIN_PANEL.md), этот файл |
+| Добавление/удаление React компонентов | [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md), этот файл |
+| Изменения в TypeScript типах, интерфейсах, enum'ах | [docs/TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md), этот файл |
+| Изменения в storage системе (Supabase/localStorage) | [docs/STORAGE.md](docs/STORAGE.md), этот файл |
+| Изменения в dev командах, deployment, API ключах | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), этот файл |
+
+**Важно:**
+- Обновляй **сразу после** внесения изменений
+- Обновляй **конкретные секции**, не переписывай весь файл
+- Проверяй **cross-references** между файлами (ссылки могут устареть)
+
+---
+
+## 📚 Навигация по документации
+
+### 🎯 Основные документы
+
+Для **полного понимания** системы обязательно изучи эти документы:
+
+| Документ | Описание | Когда использовать |
+|----------|----------|-------------------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Архитектура приложения, routing, state management | При изменении структуры приложения, добавлении views |
+| [DATABASE.md](docs/DATABASE.md) | Полная схема БД (13 таблиц), RLS политики | Перед любыми изменениями в БД (**обязательно проверь Supabase!**) |
+| [AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Универсальная система AI провайдеров (Factory + Strategy) | При работе с AI, добавлении провайдеров/моделей |
+| [DREAM_ANALYSIS.md](docs/DREAM_ANALYSIS.md) | Wizard анализа снов (4 шага), two-stage analysis | При изменении логики анализа снов |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Supabase Auth, роли (user/admin), RLS | При работе с аутентификацией, ролями, защитой данных |
+
+### 🔧 Дополнительные справочники
+
+| Документ | Описание | Когда использовать |
+|----------|----------|-------------------|
+| [STORAGE.md](docs/STORAGE.md) | Гибридное хранилище (Supabase + localStorage) | При работе с сохранением/загрузкой данных |
+| [ADMIN_PANEL.md](docs/ADMIN_PANEL.md) | Админ-панель (5 разделов), управление пользователями/AI | При работе с админ-функционалом |
+| [UI_COMPONENTS.md](docs/UI_COMPONENTS.md) | Каталог всех React компонентов (30+) | При работе с UI, поиске нужного компонента |
+| [TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md) | Справочник TypeScript типов и констант | При работе с типами, поиске интерфейсов |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, deployment на Vercel, API ключи | При настройке окружения, деплое |
+
+---
+
+## 🚀 Быстрый старт
+
+### Локальная разработка
+
 ```bash
-npm install          # Install dependencies
-npm run dev          # Start Vite dev server (http://localhost:5173)
+npm install          # Установка зависимостей
+npm run dev          # Запуск Vite dev server (http://localhost:5173)
 npm run build        # Production build
-npm run preview      # Preview production build
+npm run preview      # Предпросмотр production build
 ```
 
-### Environment Setup
-Create `.env` file in root with:
-```
-# Gemini API Key
+### Настройка окружения
+
+Создай `.env` файл в корне проекта:
+
+```env
+# Gemini API Key (если используешь Gemini)
 VITE_API_KEY=your_gemini_api_key_here
 
-# Supabase Configuration
+# Supabase Configuration (обязательно для Auth и БД)
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# OpenAI API Key (опционально)
+VITE_OPENAI_API_KEY=your_openai_api_key
+
+# Claude API Key (опционально)
+VITE_CLAUDE_API_KEY=your_claude_api_key
+
+# AiTunnel Key (опционально)
+VITE_AITUNNEL_KEY=your_aitunnel_key
+
+# NeuroAPI Key (опционально)
+VITE_NEUROAPI_KEY=your_neuroapi_key
 ```
 
-**Critical:**
-- API keys MUST have `VITE_` prefix for Vite to expose them to the client
-- Get Gemini keys from [Google AI Studio](https://ai.studio)
-- Get Supabase credentials from [Supabase Dashboard](https://app.supabase.com)
+**Критически важно:**
+- Все переменные ДОЛЖНЫ начинаться с `VITE_` для работы в клиенте
+- Подробнее о получении API ключей: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 
-## Architecture & Data Flow
+---
 
-### View System
-The app uses a view-based routing system (no router library) controlled by `AppView` type:
-- `landing` → Landing page with app introduction
-- `auth` → **NEW:** Login/registration page (Supabase authentication)
-- `wizard` → 4-step dream analysis wizard (description → context → method → results)
-- `dashboard` → User cabinet with recent dreams and quick actions (protected)
-- `journal` → Dream history with search/filter (protected)
-- `analytics` → Dream statistics and trends (protected)
-- `settings` → User preferences (protected)
-- `archetypes` → Jungian archetype analysis and personality profiling (protected)
+## 🏗️ Архитектура и потоки данных
 
-Navigation is handled via `navigateTo(view: AppView)` function in [App.tsx](App.tsx).
+### Система маршрутизации (View-Based)
 
-**Protected Routes:** If Supabase is configured, dashboard/journal/analytics/settings/archetypes require authentication. Unauthenticated users are redirected to the `auth` view.
+Приложение **НЕ использует** React Router. Вместо этого используется view-based система с типом `AppView`:
 
-### Dream Analysis Flow
+```typescript
+export type AppView =
+  | 'landing'      // Главная страница
+  | 'auth'         // Логин/регистрация (Supabase Auth)
+  | 'wizard'       // Wizard анализа снов (4 шага)
+  | 'dashboard'    // Личный кабинет (защищён)
+  | 'journal'      // Журнал снов (защищён)
+  | 'analytics'    // Аналитика пользователя (защищён)
+  | 'settings'     // Настройки профиля (защищён)
+  | 'archetypes'   // Анализ архетипов (защищён)
+  | 'admin'        // Админ-панель (требует admin роль)
+  | 'dreamView';   // Просмотр отдельного сна (защищён)
+```
 
-1. **User Input (Steps 1-3):**
-   - Step 1: Dream description text
-   - Step 2: Emotional/life context (8 fields: emotion, life situation, associations, recurring flag, day residue, character types, dream role, physical sensations)
-   - Step 3: Method selection (PsychMethod enum)
+Навигация через функцию `navigateTo(view: AppView)` в [App.tsx](App.tsx).
 
-2. **AI Analysis ([geminiService.ts](services/geminiService.ts)):**
-   - **Two-stage process:**
-     - Stage 1: Single request for summary, main analysis, advice, questions, and symbol names (uses `gemini-2.5-flash`)
-     - Stage 2: Parallel requests for each symbol's detailed meaning (3-5 concurrent calls)
-   - Uses structured JSON output with schema validation
-   - Includes robust JSON parsing with auto-repair for truncated responses
+**Подробнее:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
-3. **Storage (Hybrid System):**
-   - **Primary:** [supabaseStorageService.ts](services/supabaseStorageService.ts) - Cloud storage with Supabase
-     - Stores dream entries in `dream_entries` table
-     - Each entry includes: id, user_id, timestamp, dreamData, analysis, optional imageUrl, optional notes
-     - Protected by Row Level Security (RLS) - users can only access their own data
-   - **Fallback:** [storageService.ts](services/storageService.ts) - localStorage (if Supabase not configured)
-     - All dream entries saved to `localStorage` under key `mindscape_journal_v1`
-     - Automatic migration to Supabase on first login
+### Поток анализа сна
 
-### Image Generation
+```
+1. User Input (3 шага wizard)
+   ├─ Step 1: Описание сна (textarea)
+   ├─ Step 2: Контекст (8 полей: emotion, lifeSituation, etc.)
+   └─ Step 3: Выбор метода (PsychMethod enum)
 
-Function `visualizeDream()` uses `gemini-2.0-flash-exp` model with `generateContent()` (not the restricted `imagen-3.0` API). Returns base64 data URL from `inlineData` response part.
+2. AI Analysis (aiService.ts → активный провайдер)
+   ├─ Stage 1: summary + analysis + advice + questions + symbol names
+   └─ Stage 2: Параллельные запросы для детализации каждого символа
 
-### Archetype Analysis
+3. Результат (AnalysisResult.tsx)
+   ├─ Отображение summary, analysis, symbolism, advice, questions
+   └─ Опция генерации изображения (активный image provider)
 
-The Archetypes page provides Jungian archetype profiling based on user's dream history:
+4. Сохранение в журнал (опционально)
+   └─ supabaseStorageService → dream_entries table (protected by RLS)
+```
 
-**Data Flow:**
-1. Fetches all analyzed dreams from `analysis_metadata` table (includes unsaved dreams)
-2. Falls back to `dream_entries` (journal) if metadata lacks descriptions
-3. Analyzes up to 10 most recent dreams via `analyzeArchetypes()` in geminiService
-4. Each dream is scored 0-100 for all 12 archetypes (Hero, Sage, Explorer, Rebel, Creator, Ruler, Magician, Lover, Caregiver, Jester, Everyman, Innocent)
-5. Scores are aggregated and averaged across all dreams
-6. Profile saved to localStorage as `psydream_archetype_profile_v1`
+**Подробнее:** [docs/DREAM_ANALYSIS.md](docs/DREAM_ANALYSIS.md)
 
-**Auto-Update System:**
-- Profile marked as "stale" after each new dream analysis
-- Auto-refreshes when user visits Archetypes page with stale profile
-- Manual refresh available via "Обновить профиль" button
-- Stale flag cleared after successful refresh
+### Универсальная система AI провайдеров
 
-**Storage:**
-- Currently uses localStorage for profile persistence
-- Future: can migrate to `archetype_profiles` table in Supabase for cross-device sync
+PsyDream использует **универсальную систему AI провайдеров**, а не привязан к конкретному AI.
 
-### Key Technical Patterns
+**Архитектура:**
+- **AIService (Singleton)** - главный интерфейс для AI операций
+- **AIProviderFactory** - создание провайдеров по типу
+- **BaseProvider** - абстрактный базовый класс
+- **Конкретные провайдеры** - GeminiProvider, OpenAIProvider, ClaudeProvider
 
-**API Key Retrieval:**
-The `getApiKey()` function in [geminiService.ts](services/geminiService.ts:7-27) has multi-fallback logic:
-1. Try `import.meta.env.VITE_API_KEY` (Vite standard)
-2. Fall back to `process.env.VITE_API_KEY` or `process.env.API_KEY` (legacy/server)
-3. Return empty string if both fail
+**Task-based routing:**
+- Отдельный провайдер для **text** задач (анализ снов)
+- Отдельный провайдер для **image** задач (генерация изображений)
+- Выбор в Admin Panel → AI Providers
 
-This prevents crashes in different runtime environments (Vite dev, Vercel production, Node).
+**Поддерживаемые провайдеры:**
+- Gemini (Google AI)
+- OpenAI (GPT-4, DALL-E 3)
+- Claude (Anthropic)
+- AiTunnel (OpenAI-compatible API)
+- NeuroAPI (67+ российских моделей)
 
-**Error Handling:**
-- API key validation happens inside functions (not at module level) to avoid initialization errors
-- JSON parsing includes repair logic for unclosed quotes/brackets (common with AI truncation)
-- All AI calls wrapped in try-catch with user-friendly error messages
+**Подробнее:** [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
 
-**State Management:**
-No Redux/Zustand. All state in App.tsx via `useState`:
-- `view` (current page)
-- `step` (wizard progress, 1-4)
-- `dreamData` (user's dream input)
-- `mobileMenuOpen` (sidebar toggle)
-- `user` (authenticated user object, null if not logged in)
-- `authLoading` (loading state during authentication check)
+### Аутентификация и авторизация
 
-**Authentication Flow:**
-1. On app mount, check for existing Supabase session
-2. Subscribe to auth state changes (login/logout)
-3. Auto-migrate localStorage entries to Supabase on first login
-4. Protect private routes (redirect to auth if not logged in)
+**Supabase Auth** для регистрации, входа, управления пользователями.
 
-## Important File Locations
+**Роли:**
+- `user` - обычный пользователь (доступ к своим снам)
+- `admin` - администратор (доступ к админ-панели)
 
-- **Main App Logic:** [App.tsx](App.tsx) - routing, layout switching, state management, authentication
-- **AI Service:** [services/geminiService.ts](services/geminiService.ts) - Gemini API integration
-- **Storage Services:**
-  - [services/supabaseStorageService.ts](services/supabaseStorageService.ts) - Supabase database CRUD operations
-  - [services/storageService.ts](services/storageService.ts) - localStorage fallback
-- **Authentication:**
-  - [services/supabaseClient.ts](services/supabaseClient.ts) - Supabase client initialization
-  - [services/authService.ts](services/authService.ts) - Authentication functions (signUp, signIn, signOut, etc.)
-- **Type Definitions:** [types.ts](types.ts) - all interfaces and enums (includes User, updated JournalEntry)
-- **Method Metadata:** [constants.ts](constants.ts) - UI data for psychological methods
-- **UI Components:**
-  - [components/](components/) - individual React components
-  - [components/Auth.tsx](components/Auth.tsx) - Login/registration forms
-  - [components/Sidebar.tsx](components/Sidebar.tsx) - Navigation with user info and logout
-- **Prompt Templates:** [prompts/](prompts/) - markdown files with method-specific prompts (currently unused)
+**Защита данных:**
+- **Row Level Security (RLS)** - пользователи видят только свои данные
+- Автоматическая миграция localStorage → Supabase при первом входе
 
-## Deployment (Vercel)
+**Подробнее:** [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)
 
-1. Import GitHub repo to Vercel
+### Гибридное хранилище
+
+**Primary:** Supabase (если настроен)
+- `dream_entries` - журнал снов
+- `analysis_metadata` - метаданные анализов
+- `user_profiles` - профили пользователей
+- И ещё 10 таблиц (см. [docs/DATABASE.md](docs/DATABASE.md))
+
+**Fallback:** localStorage (если Supabase не настроен)
+- Ключ `mindscape_journal_v1`
+- Автоматическая миграция в Supabase при первом логине
+
+**Подробнее:** [docs/STORAGE.md](docs/STORAGE.md)
+
+---
+
+## 📂 Важные файлы и директории
+
+### Ключевые файлы приложения
+
+| Файл | Описание |
+|------|----------|
+| [App.tsx](App.tsx) | Главный компонент: routing, layout, state management, authentication |
+| [types.ts](types.ts) | Все TypeScript типы и enum'ы (см. [docs/TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md)) |
+| [constants.ts](constants.ts) | Метаданные методов психоанализа, предустановленные эмоции |
+
+### AI система
+
+| Файл | Описание |
+|------|----------|
+| [services/ai/aiService.ts](services/ai/aiService.ts) | Singleton для AI операций, task-based routing |
+| [services/ai/AIProviderFactory.ts](services/ai/AIProviderFactory.ts) | Фабрика провайдеров |
+| [services/ai/providers/BaseProvider.ts](services/ai/providers/BaseProvider.ts) | Абстрактный базовый класс |
+| [services/ai/providers/GeminiProvider.ts](services/ai/providers/GeminiProvider.ts) | Gemini провайдер |
+| [services/ai/providers/OpenAIProvider.ts](services/ai/providers/OpenAIProvider.ts) | OpenAI/AiTunnel/NeuroAPI провайдер |
+| [services/ai/providers/ClaudeProvider.ts](services/ai/providers/ClaudeProvider.ts) | Claude провайдер |
+
+### Сервисы хранения и аутентификации
+
+| Файл | Описание |
+|------|----------|
+| [services/supabaseClient.ts](services/supabaseClient.ts) | Инициализация Supabase client |
+| [services/supabaseStorageService.ts](services/supabaseStorageService.ts) | CRUD операции с Supabase |
+| [services/storageService.ts](services/storageService.ts) | localStorage fallback |
+| [services/authService.ts](services/authService.ts) | signUp, signIn, signOut, updateProfile, isAdmin |
+| [services/adminService.ts](services/adminService.ts) | Админ-функции (управление пользователями, AI провайдерами) |
+
+### React компоненты
+
+| Директория | Описание |
+|-----------|----------|
+| [components/](components/) | Все React компоненты (30+ штук) |
+| [components/Auth.tsx](components/Auth.tsx) | Логин/регистрация |
+| [components/Sidebar.tsx](components/Sidebar.tsx) | Боковое меню навигации |
+| [components/AdminPanel.tsx](components/AdminPanel.tsx) | Админ-панель |
+| [components/DreamForm.tsx](components/DreamForm.tsx) | Wizard Step 1 |
+| [components/ContextForm.tsx](components/ContextForm.tsx) | Wizard Step 2 |
+| [components/MethodSelector.tsx](components/MethodSelector.tsx) | Wizard Step 3 |
+| [components/AnalysisResult.tsx](components/AnalysisResult.tsx) | Wizard Step 4 |
+
+**Полный каталог:** [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md)
+
+### База данных
+
+| Директория | Описание |
+|-----------|----------|
+| [supabase/migrations/](supabase/migrations/) | SQL миграции (20+ файлов) |
+
+**Подробнее о схеме:** [docs/DATABASE.md](docs/DATABASE.md)
+
+---
+
+## 🎯 Быстрая справка для частых задач
+
+### Добавление нового AI провайдера
+
+1. Создай класс провайдера в `/services/ai/providers/YourProvider.ts` (наследник `BaseProvider`)
+2. Добавь case в `AIProviderFactory.create()` ([AIProviderFactory.ts:44-58](services/ai/AIProviderFactory.ts:44-58))
+3. Добавь тип провайдера в `AIProviderType` ([types.ts:246](types.ts:246))
+4. Создай миграцию для добавления провайдера в БД
+5. **Обнови:** [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md), этот файл
+
+**Подробная инструкция:** [docs/AI_PROVIDERS.md - "Добавление нового провайдера"](docs/AI_PROVIDERS.md)
+
+### Добавление новой view (страницы)
+
+1. Добавь view в `AppView` type ([types.ts:82](types.ts:82))
+2. Создай компонент в `/components/YourView.tsx`
+3. Добавь case в `renderCabinetContent()` или создай новый layout ([App.tsx](App.tsx))
+4. Добавь кнопку навигации в [Sidebar.tsx](components/Sidebar.tsx)
+5. Если view защищён, добавь его в `privateViews` array в `navigateTo()` ([App.tsx](App.tsx))
+6. **Обновi:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md), этот файл
+
+**Подробнее:** [docs/ARCHITECTURE.md - "View System"](docs/ARCHITECTURE.md)
+
+### Добавление нового метода психоанализа
+
+1. Добавь enum value в `PsychMethod` ([types.ts:2-9](types.ts:2-9))
+2. Добавь метаданные в `PSYCH_METHODS` array ([constants.ts:4-59](constants.ts:4-59))
+3. Добавь switch case в `buildPrompt()` в BaseProvider ([services/ai/providers/BaseProvider.ts](services/ai/providers/BaseProvider.ts))
+4. **Обновi:** [docs/TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md), [docs/DREAM_ANALYSIS.md](docs/DREAM_ANALYSIS.md), этот файл
+
+### Изменение схемы БД
+
+1. **ОБЯЗАТЕЛЬНО:** Проверь текущую структуру через `mcp__supabase__list_tables` (не только SQL файлы!)
+2. Создай миграцию в `/supabase/migrations/YYYYMMDD_description.sql`
+3. Примени миграцию через Supabase SQL Editor или CLI
+4. Обнови RLS политики (если нужно)
+5. Обнови TypeScript типы в [types.ts](types.ts)
+6. **Обновi:** [docs/DATABASE.md](docs/DATABASE.md), [docs/TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md), этот файл
+
+**ВАЖНО:** Всегда проверяй реальную БД, а не только миграции! Схема может отличаться.
+
+**Подробнее:** [docs/DATABASE.md](docs/DATABASE.md)
+
+### Работа с Supabase
+
+Проект использует MCP-сервер Supabase для прямого доступа к БД. Доступные команды:
+
+```bash
+# Список таблиц
+mcp__supabase__list_tables
+
+# Список моделей AI
+mcp__supabase__execute_sql
+# query: "SELECT * FROM ai_models WHERE provider_type = 'openai'"
+
+# Применение миграции
+mcp__supabase__apply_migration
+# name: add_new_feature
+# query: "CREATE TABLE..."
+```
+
+**Подробнее:** [docs/DATABASE.md](docs/DATABASE.md), [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+
+---
+
+## 🚢 Deployment (Vercel)
+
+1. Импортируй GitHub репозиторий в Vercel
 2. Framework: **Vite**
 3. Environment Variables:
-   - `VITE_API_KEY` = your Gemini key
-   - `VITE_SUPABASE_URL` = your Supabase project URL
-   - `VITE_SUPABASE_ANON_KEY` = your Supabase anon/public key
-4. Auto-deploy on push to main branch
+   - `VITE_API_KEY` = Gemini key (если используешь)
+   - `VITE_SUPABASE_URL` = Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` = Supabase anon key
+   - `VITE_OPENAI_API_KEY` = OpenAI key (опционально)
+   - `VITE_CLAUDE_API_KEY` = Claude key (опционально)
+   - `VITE_AITUNNEL_KEY` = AiTunnel key (опционально)
+   - `VITE_NEUROAPI_KEY` = NeuroAPI key (опционально)
+4. Auto-deploy при push в `main` branch
 
-**Security Note:** Gemini API key is exposed on client side (acceptable for personal/prototype use). Supabase uses Row Level Security (RLS) to protect user data - anon key is safe to expose.
+**Security Note:** API ключи exposed на клиенте (приемлемо для personal/prototype). Supabase использует RLS для защиты данных - anon key безопасен для публикации.
 
-## Known Limitations
+**Подробнее:** [docs/DEVELOPMENT.md - "Деплой на Vercel"](docs/DEVELOPMENT.md)
 
-- Model rate limits: `gemini-2.5-flash` has 15 RPM free tier limit
-- Image generation availability depends on Gemini model access (some regions restricted)
-- Russian language only (hardcoded in prompts and UI)
-- Email verification required for Supabase sign-ups (configurable in Supabase dashboard)
+---
 
-## Common Development Patterns
+## ⚙️ Ключевые технические паттерны
 
-### Adding a New Psychological Method
+### Получение API ключей
 
-1. Add enum value to `PsychMethod` in [types.ts](types.ts:2-9)
-2. Add method metadata to `PSYCH_METHODS` array in [constants.ts](constants.ts:4-59)
-3. Add switch case in `analyzeDream()` in [geminiService.ts](services/geminiService.ts:89-111)
+Функция `getApiKey()` в провайдерах имеет multi-fallback логику:
 
-### Adding a New View
+1. `import.meta.env.VITE_[PROVIDER]_API_KEY` (Vite standard)
+2. `process.env.VITE_[PROVIDER]_API_KEY` (legacy/server)
+3. `process.env.[PROVIDER]_API_KEY` (без префикса)
+4. Возврат пустой строки если всё не найдено
 
-1. Add view name to `AppView` type in [types.ts](types.ts:57)
-2. Create component in [components/](components/)
-3. Add route case in `renderCabinetLayout()` or create new layout in [App.tsx](App.tsx)
-4. Add navigation button in [Sidebar.tsx](components/Sidebar.tsx) or other nav component
-5. If view should be protected, add it to `privateViews` array in `navigateTo()` function
+Предотвращает ошибки в разных runtime окружениях (Vite dev, Vercel production, Node).
 
-## Supabase Database Setup
+### Обработка ошибок
 
-To enable multi-user authentication and cloud storage, set up Supabase:
+- Валидация API ключей внутри функций (не на уровне модуля) для предотвращения initialization errors
+- JSON parsing с repair логикой для незакрытых quotes/brackets (частая проблема с AI truncation)
+- Все AI вызовы обёрнуты в try-catch с user-friendly сообщениями об ошибках
 
-### 1. Create Supabase Project
+### State Management
 
-1. Sign up at [supabase.com](https://supabase.com)
-2. Create a new project
-3. Copy `Project URL` and `anon public` key to `.env` file
+**Нет Redux/Zustand.** Всё состояние в [App.tsx](App.tsx) через `useState`:
 
-### 2. Run SQL Schema
+- `view` (текущая страница)
+- `step` (прогресс wizard, 1-4)
+- `dreamData` (пользовательский input сна)
+- `mobileMenuOpen` (toggle sidebar)
+- `user` (объект залогиненного пользователя, null если не залогинен)
+- `authLoading` (loading state при проверке аутентификации)
+- `selectedDream` (выбранный сон для просмотра)
+- `adminSubView` (текущий раздел админ-панели)
 
-Execute this SQL in Supabase SQL Editor to create the database schema:
+**Подробнее:** [docs/ARCHITECTURE.md - "Управление состоянием"](docs/ARCHITECTURE.md)
 
-```sql
--- Table for dream entries
-CREATE TABLE dream_entries (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  timestamp BIGINT NOT NULL,
-  dream_data JSONB NOT NULL,
-  analysis JSONB,
-  image_url TEXT,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+### Authentication Flow
 
--- Enable Row Level Security
-ALTER TABLE dream_entries ENABLE ROW LEVEL SECURITY;
+1. При монтировании App: проверка существующей Supabase сессии
+2. Подписка на изменения auth state (login/logout)
+3. Автоматическая миграция localStorage entries в Supabase при первом логине
+4. Защита private routes (редирект на auth если не залогинен)
+5. Проверка admin роли для доступа к админ-панели
 
--- RLS Policies: Users can only access their own dreams
-CREATE POLICY "Users can view own dreams"
-  ON dream_entries FOR SELECT
-  USING (auth.uid() = user_id);
+**Подробнее:** [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)
 
-CREATE POLICY "Users can insert own dreams"
-  ON dream_entries FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+---
 
-CREATE POLICY "Users can update own dreams"
-  ON dream_entries FOR UPDATE
-  USING (auth.uid() = user_id);
+## ⚠️ Известные ограничения
 
-CREATE POLICY "Users can delete own dreams"
-  ON dream_entries FOR DELETE
-  USING (auth.uid() = user_id);
+- **Rate limits:** Бесплатные тиры AI провайдеров имеют ограничения (например, Gemini: 15 RPM)
+- **Доступность генерации изображений:** Зависит от доступа к моделям (некоторые регионы ограничены)
+- **Язык:** Только русский язык (hardcoded в промптах и UI)
+- **Email verification:** Требуется для Supabase sign-ups (настраивается в Supabase dashboard)
 
--- Indexes for performance
-CREATE INDEX idx_dream_entries_user_id ON dream_entries(user_id);
-CREATE INDEX idx_dream_entries_timestamp ON dream_entries(timestamp DESC);
-```
+---
 
-### 3. Configure Authentication
+## 📚 Связанные документы
 
-1. Go to **Authentication** → **Providers** in Supabase dashboard
-2. Enable **Email** provider (enabled by default)
-3. Optional: Configure email templates for better UX
-4. Optional: Enable OAuth providers (Google, GitHub, etc.)
+### Для глубокого понимания системы:
 
-### 4. Email Settings (Optional)
+1. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Архитектура, routing, state, layouts
+2. **[docs/DATABASE.md](docs/DATABASE.md)** - Полная схема БД (13 таблиц + RLS)
+3. **[docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)** - Универсальная система AI провайдеров
+4. **[docs/DREAM_ANALYSIS.md](docs/DREAM_ANALYSIS.md)** - Wizard анализа снов (4 шага)
+5. **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Supabase Auth, роли, RLS
 
-By default, Supabase sends confirmation emails. To customize:
-- Go to **Authentication** → **Email Templates**
-- Edit confirmation, password reset, and magic link templates
-- Or disable email confirmation in **Authentication** → **Settings** for development
+### Для работы с конкретными задачами:
 
-### 5. Test Authentication
+6. **[docs/STORAGE.md](docs/STORAGE.md)** - Гибридное хранилище (Supabase + localStorage)
+7. **[docs/ADMIN_PANEL.md](docs/ADMIN_PANEL.md)** - Админ-панель (5 разделов)
+8. **[docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md)** - Каталог React компонентов (30+)
+9. **[docs/TYPES_AND_CONSTANTS.md](docs/TYPES_AND_CONSTANTS.md)** - TypeScript типы и константы
+10. **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Dev setup, deployment, troubleshooting
 
-1. Start the app: `npm run dev`
-2. Navigate to login/registration page
-3. Create a test account
-4. Verify email (check spam folder if needed)
-5. Login and test dream creation
-6. Check Supabase dashboard → **Table Editor** → `dream_entries` to see stored data
+---
 
-### Migration from localStorage
+## 🔥 Помни главное правило
 
-The app automatically migrates localStorage entries to Supabase on first login:
-- Existing dreams in `localStorage` are uploaded to user's cloud account
-- Migration happens once per user (checks if user already has cloud entries)
-- Original localStorage data remains intact as backup
+**Перед любым изменением в системе:**
+
+1. 📖 **Читай соответствующую документацию** (см. таблицу выше)
+2. 🔍 **Проверяй актуальную структуру БД** через Supabase (если работаешь с БД)
+3. ✍️ **Вноси изменения**
+4. 📝 **ОБЯЗАТЕЛЬНО обнови документацию** (соответствующий MD файл + этот CLAUDE.md если нужно)
+5. 🔗 **Проверь cross-references** между документами
+
+**Документация - это не дополнительная работа, это часть кода. Устаревшая документация хуже, чем её отсутствие!**
